@@ -1,0 +1,10 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+.pnpm-store/
+pnpm-lock.yaml
+src-tauri/Cargo.lock
+*.png
+*.ico
+*.icns

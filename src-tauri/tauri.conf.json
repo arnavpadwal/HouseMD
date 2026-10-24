@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HouseMD",
+  "version": "1.0.0",
+  "identifier": "com.housemd.markdown",
+  "build": {
+    "beforeDevCommand": "./node_modules/.bin/vite --host 127.0.0.1 --port 1420",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "./node_modules/.bin/tsc && ./node_modules/.bin/vite build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "HouseMD",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 800,
+        "minHeight": 560,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; font-src 'self' data:; connect-src ipc: http://ipc.localhost",
+      "assetProtocol": { "enable": true, "scope": ["$HOME/**"] }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "category": "Productivity",
+    "shortDescription": "A quiet, colorful Markdown workspace"
+  }
+}
