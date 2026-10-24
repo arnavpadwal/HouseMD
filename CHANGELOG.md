@@ -20,6 +20,7 @@ The editor release: CodeMirror, line numbers, multi-cursor search, and LaTeX.
 - LaTeX build panel with compiler status, build log, generated PDF path, and open-PDF action.
 - LaTeX-specific Markdown guide entries.
 - LaTeX files in the open dialog, CLI launcher, recent files, and folder sidebar.
+- Linux distribution is now Flatpak-only; the Flatpak bundle is the single official Linux build.
 
 ### Changed
 

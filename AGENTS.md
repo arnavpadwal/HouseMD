@@ -88,8 +88,9 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
   native dialog (native dialogs can deadlock while a close request is pending).
 - The Tauri window title is set via `core:window:allow-set-title`; there is no router.
 - `dist/`, `src-tauri/target/`, and `src-tauri/gen/` are ignored build outputs; never edit or
-  commit them.
+  commit them. Flatpak artifacts are built with `bash flatpak/build-flatpak.sh`.
 - CI lives in `.github/workflows/ci.yml` and runs frontend checks, Rust fmt/clippy, and a
   Tauri build on `main` and `develop`.
-- Version 2.5.0 is the public baseline. Keep `main` release-ready and integrate work on
-  `develop`.
+- Version 2.5.0 is the public baseline. Linux distribution is **Flatpak-only**: do not add
+  deb/rpm/AppImage bundle targets or release assets. Keep `main` release-ready and integrate
+  work on `develop`.

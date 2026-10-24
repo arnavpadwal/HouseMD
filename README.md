@@ -5,14 +5,14 @@
 <h1 align="center">HouseMD</h1>
 
 <p align="center">
-  A quiet, local-first Markdown and LaTeX workspace for Linux, macOS, and Windows.
+  A quiet, local-first Markdown and LaTeX workspace for Linux, distributed as a Flatpak.
 </p>
 
 <p align="center">
   <a href="https://github.com/arnavpadwal/HouseMD/actions/workflows/ci.yml"><img src="https://github.com/arnavpadwal/HouseMD/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/arnavpadwal/HouseMD/releases"><img src="https://img.shields.io/github/v/release/arnavpadwal/HouseMD?style=flat-square" alt="Latest release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/arnavpadwal/HouseMD?style=flat-square" alt="License" /></a>
-  <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-2ea44f?style=flat-square" alt="Platforms" />
+  <img src="https://img.shields.io/badge/platform-Linux-2ea44f?style=flat-square" alt="Linux" />
   <img src="https://img.shields.io/badge/Flatpak-bundle-4A90D9?style=flat-square&logo=flatpak&logoColor=white" alt="Flatpak bundle" />
   <img src="https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white" alt="Tauri 2" />
   <img src="https://img.shields.io/badge/CodeMirror-6-1c1e21?style=flat-square" alt="CodeMirror 6" />
@@ -89,11 +89,9 @@ Write Markdown on the left and see the rendered result on the right. Open a `.te
 
 ## Installation
 
-### Prebuilt release
+### Flatpak
 
-Download the latest bundle from [Releases](https://github.com/arnavpadwal/HouseMD/releases).
-
-### Flatpak (recommended on Linux)
+Download the latest bundle from [Releases](https://github.com/arnavpadwal/HouseMD/releases), then install it:
 
 ```sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -101,32 +99,9 @@ flatpak install --user ./HouseMD-2.5.0-x86_64.flatpak
 flatpak run com.housemd.markdown
 ```
 
-The Flatpak uses the GNOME 51 runtime (which includes WebKitGTK 4.1), has access to your home directory, and can use your host TeX Live installation for LaTeX compilation. The app appears in your desktop launcher after installation.
+HouseMD appears in the desktop launcher after installation. The bundle uses the GNOME 51 runtime, which includes WebKitGTK 4.1.
 
-**Debian / Ubuntu**
-
-```sh
-sudo apt install ./HouseMD_2.5.0_amd64.deb
-```
-
-**Fedora / RHEL**
-
-```sh
-sudo dnf install ./HouseMD-2.5.0-1.x86_64.rpm
-```
-
-**Arch Linux / other distributions**
-
-Use the AppImage:
-
-```sh
-chmod +x HouseMD_2.5.0_amd64.AppImage
-./HouseMD_2.5.0_amd64.AppImage
-```
-
-For desktop-menu integration, use an AppImage manager such as Gear Lever, or build from source and install the binary and `.desktop` entry into `~/.local`.
-
-> v2.5.0 ships Flatpak, Debian, Fedora/RHEL, and AppImage bundles. macOS and Windows builds can be produced from source with Tauri; signed installers require platform signing credentials and are tracked on the roadmap.
+**Why Flatpak?** One installable file, a consistent runtime, app-menu integration, and a sandboxed process. The bundle has access to your home directory for normal document editing and uses your host TeX Live installation for LaTeX compilation.
 
 ### LaTeX requirements
 
@@ -149,7 +124,7 @@ In the Flatpak build, the compiler wrappers call your **host** TeX installation 
 - Rust stable
 - Node.js 22.6+
 - pnpm 10+
-- Tauri system dependencies ([Linux](https://v2.tauri.app/start/prerequisites/), macOS, or Windows)
+- Tauri Linux system dependencies ([prerequisites](https://v2.tauri.app/start/prerequisites/))
 - Optional: TeX Live for LaTeX compilation
 
 ```sh
@@ -159,10 +134,11 @@ pnpm install
 pnpm tauri dev
 ```
 
-Create a distributable for the current platform:
+Create the Flatpak bundle:
 
 ```sh
-pnpm tauri build
+pnpm tauri build --no-bundle
+bash flatpak/build-flatpak.sh
 ```
 
 ## Usage
@@ -282,7 +258,8 @@ pnpm install
 pnpm tauri dev      # desktop app with Vite
 pnpm check          # typecheck + 18 tests + Prettier check
 pnpm build          # frontend production build
-pnpm tauri build    # desktop bundles
+pnpm tauri build --no-bundle  # desktop binary
+bash flatpak/build-flatpak.sh # Flatpak bundle
 ```
 
 Useful individual commands:
@@ -309,8 +286,6 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 - [x] v2.0.0 — tabs, recovery, autosave, find/replace, settings, folder sidebar
 - [x] v2.5.0 — CodeMirror editor, line numbers, multi-cursor/change-all, LaTeX editing and compilation
 - [x] v2.5.0 Flatpak bundle with host TeX support
-- [ ] Signed and notarized macOS installers
-- [ ] Signed Windows installers
 - [ ] LaTeX project/bibliography compilation (`bibtex` / `biber`)
 - [ ] File operations in the sidebar (rename, delete, new file)
 - [ ] Split-pane scroll synchronization
