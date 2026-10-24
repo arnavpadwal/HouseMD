@@ -17,6 +17,7 @@ target/
 
 # Bundles
 *.AppImage
+*.flatpak
 *.deb
 *.rpm
 *.dmg

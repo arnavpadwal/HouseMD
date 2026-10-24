@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=HouseMD
+GenericName=Markdown and LaTeX Editor
+Comment=A quiet, local-first Markdown and LaTeX workspace
+Exec=housemd %F
+Icon=com.housemd.markdown
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/markdown;text/x-markdown;text/x-tex;text/plain;
+Keywords=markdown;latex;editor;notes;text;
+StartupNotify=true
+StartupWMClass=housemd

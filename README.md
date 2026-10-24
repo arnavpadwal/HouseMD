@@ -13,6 +13,7 @@
   <a href="https://github.com/arnavpadwal/HouseMD/releases"><img src="https://img.shields.io/github/v/release/arnavpadwal/HouseMD?style=flat-square" alt="Latest release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/arnavpadwal/HouseMD?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-2ea44f?style=flat-square" alt="Platforms" />
+  <img src="https://img.shields.io/badge/Flatpak-bundle-4A90D9?style=flat-square&logo=flatpak&logoColor=white" alt="Flatpak bundle" />
   <img src="https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white" alt="Tauri 2" />
   <img src="https://img.shields.io/badge/CodeMirror-6-1c1e21?style=flat-square" alt="CodeMirror 6" />
   <img src="https://img.shields.io/badge/TypeScript-7-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -92,6 +93,16 @@ Write Markdown on the left and see the rendered result on the right. Open a `.te
 
 Download the latest bundle from [Releases](https://github.com/arnavpadwal/HouseMD/releases).
 
+### Flatpak (recommended on Linux)
+
+```sh
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install --user ./HouseMD-2.5.0-x86_64.flatpak
+flatpak run com.housemd.markdown
+```
+
+The Flatpak uses the GNOME 51 runtime (which includes WebKitGTK 4.1), has access to your home directory, and can use your host TeX Live installation for LaTeX compilation. The app appears in your desktop launcher after installation.
+
 **Debian / Ubuntu**
 
 ```sh
@@ -115,7 +126,7 @@ chmod +x HouseMD_2.5.0_amd64.AppImage
 
 For desktop-menu integration, use an AppImage manager such as Gear Lever, or build from source and install the binary and `.desktop` entry into `~/.local`.
 
-> v2.5.0 ships Linux bundles. macOS and Windows builds can be produced from source with Tauri; signed installers require platform signing credentials and are tracked on the roadmap.
+> v2.5.0 ships Flatpak, Debian, Fedora/RHEL, and AppImage bundles. macOS and Windows builds can be produced from source with Tauri; signed installers require platform signing credentials and are tracked on the roadmap.
 
 ### LaTeX requirements
 
@@ -128,6 +139,8 @@ lualatex --version
 ```
 
 Install TeX Live (or MacTeX / MiKTeX) to enable **Compile PDF**. The app runs the compiler in the document's folder with shell escape disabled and opens the generated PDF with your system PDF viewer.
+
+In the Flatpak build, the compiler wrappers call your **host** TeX installation through `flatpak-spawn`. If TeX is not installed on the host, the LaTeX panel reports that no compiler was found.
 
 ### Build from source
 
@@ -256,6 +269,10 @@ src-tauri/
   src/lib.rs      Tauri setup, scoped access, LaTeX compile command
   capabilities/   permission scopes
   tauri.conf.json window, CSP, asset protocol, bundles
+flatpak/
+  com.housemd.markdown.yml  Flatpak manifest
+  build-flatpak.sh          local Flatpak bundle builder
+  wrappers                   host TeX wrappers
 ```
 
 ## Development
@@ -291,6 +308,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 - [x] v1.0.0 — renderer, themes, file workflow, single instance
 - [x] v2.0.0 — tabs, recovery, autosave, find/replace, settings, folder sidebar
 - [x] v2.5.0 — CodeMirror editor, line numbers, multi-cursor/change-all, LaTeX editing and compilation
+- [x] v2.5.0 Flatpak bundle with host TeX support
 - [ ] Signed and notarized macOS installers
 - [ ] Signed Windows installers
 - [ ] LaTeX project/bibliography compilation (`bibtex` / `biber`)

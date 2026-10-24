@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.housemd.markdown</id>
+  <name>HouseMD</name>
+  <summary>A quiet, local-first Markdown and LaTeX workspace</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>HouseMD is a local-first Markdown and LaTeX editor with live preview, CodeMirror editing, line numbers, tabs, session recovery, and a folder sidebar.</p>
+    <p>Markdown previews support KaTeX math, Mermaid diagrams, sanitized README HTML, tables, task lists, and local images. LaTeX documents can be compiled to PDF with a host TeX Live installation.</p>
+  </description>
+  <launchable type="desktop-id">com.housemd.markdown.desktop</launchable>
+  <url type="homepage">https://github.com/arnavpadwal/HouseMD</url>
+  <url type="bugtracker">https://github.com/arnavpadwal/HouseMD/issues</url>
+  <developer_name>Arnav Padwal</developer_name>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="2.5.0" date="2026-10-25"/>
+  </releases>
+</component>
