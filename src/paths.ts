@@ -33,3 +33,21 @@ export function normalizePath(path: string) {
   const result = output.join(separator);
   return result || separator;
 }
+
+export type FileKind = 'markdown' | 'latex' | 'text';
+
+export function fileKind(path: string): FileKind {
+  const extension = path.split(/[\\/]/).pop()?.split('.').pop()?.toLowerCase() ?? '';
+  if (extension === 'tex' || extension === 'latex' || extension === 'sty' || extension === 'cls') return 'latex';
+  if (extension === 'md' || extension === 'markdown' || extension === 'mdown') return 'markdown';
+  return 'text';
+}
+
+export function isLatexDocument(path: string) {
+  const extension = path.split(/[\\/]/).pop()?.split('.').pop()?.toLowerCase() ?? '';
+  return extension === 'tex' || extension === 'latex';
+}
+
+export function isSupportedFile(path: string) {
+  return /\.(?:md|markdown|mdown|txt|tex|latex|bib|sty|cls)$/i.test(path);
+}

@@ -6,9 +6,9 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ask, message, open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { openPath as openSystemPath, openUrl } from '@tauri-apps/plugin-opener';
 import { escapeHtml, renderMarkdown } from './markdown';
-import { helpItems, icons, sample, type HelpItem } from './content';
+import { helpItems, icons, latexHelpItems, sample, type HelpItem } from './content';
 import {
   addRecent,
   clearSession,
@@ -24,9 +24,9 @@ import {
   type ThemeMode,
   type ViewMode,
 } from './model';
-import { baseName, dirName, normalizePath } from './paths';
+import { baseName, dirName, fileKind, isLatexDocument, isSupportedFile, normalizePath } from './paths';
+import { createEditor, type EditorController } from './editor';
 import { createExplorer } from './explorer';
-import { createFindBar } from './findbar';
 import { openSettingsPanel } from './settings-panel';
 
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -43,6 +43,8 @@ let activeTab: Tab = tabs[0];
 let recentFiles = loadRecent();
 let helpOpen = false;
 let helpPosition = '';
+let currentHelpItems: HelpItem[] = helpItems;
+let currentHelpTitle = 'Markdown';
 let splitRatio = Math.max(0.25, Math.min(0.75, Number(localStorage.getItem('housemd-split-ratio')) || 0.5));
 let previewTimer: number | undefined;
 let diagramTimer: number | undefined;
@@ -54,21 +56,22 @@ let pendingToast = '';
 let closePromptOpen = false;
 let forceClosing = false;
 
-const findbar = createFindBar({
-  getEditor: () => document.querySelector<HTMLTextAreaElement>('#editor'),
-  setContent: (value) => {
-    activeTab.content = value;
-    activeTab.dirty = value !== activeTab.savedContent;
-    updateChrome();
-    renderTabs();
-    refreshPreview();
-    scheduleSessionSave();
-    scheduleAutosave();
-  },
-  ensureEditorVisible: () => {
-    if (mode === 'read') setMode('split');
-  },
-});
+interface LatexBuildResult {
+  pdf: string;
+  log: string;
+  compiler: string;
+}
+
+interface LatexBuildState {
+  building: boolean;
+  log: string;
+  pdf: string;
+  error: string;
+}
+
+let editor: EditorController | null = null;
+let latexCompiler: string | null = null;
+const latexBuilds = new Map<string, LatexBuildState>();
 
 const explorer = createExplorer({
   allowDirectory,
@@ -95,10 +98,6 @@ function resolveTheme(next: ThemeMode): 'light' | 'dark' {
   return next;
 }
 
-function activeEditor() {
-  return document.querySelector<HTMLTextAreaElement>('#editor');
-}
-
 function docName(tab = activeTab) {
   return tab.path ? baseName(tab.path) : 'Untitled.md';
 }
@@ -112,9 +111,15 @@ function statusDot() {
   return `<i class="live-dot${activeTab.dirty ? ' unsaved' : ''}"></i>`;
 }
 
+function languageLabel(path: string) {
+  if (!path) return 'Markdown';
+  const kind = fileKind(path);
+  return kind === 'latex' ? 'LaTeX' : kind === 'markdown' ? 'Markdown' : 'Text';
+}
+
 function statsText() {
   const lines = activeTab.content.split('\n').length;
-  return `${lines} ${lines === 1 ? 'line' : 'lines'} · ${activeTab.content.length} ${activeTab.content.length === 1 ? 'character' : 'characters'}`;
+  return `${languageLabel(activeTab.path)} · ${lines} ${lines === 1 ? 'line' : 'lines'} · ${activeTab.content.length} ${activeTab.content.length === 1 ? 'character' : 'characters'}`;
 }
 
 function isPristine(tab: Tab) {
@@ -171,6 +176,15 @@ function resolvePreviewAssets(root: HTMLElement) {
 function refreshPreview(preserveScroll = true) {
   const preview = document.querySelector<HTMLElement>('#preview');
   if (!preview) return;
+  const kind = activeTab.path ? fileKind(activeTab.path) : 'markdown';
+  if (kind === 'latex' && isLatexDocument(activeTab.path)) {
+    renderLatexPreview(preview);
+    return;
+  }
+  if (kind !== 'markdown') {
+    renderPlainPreview(preview);
+    return;
+  }
   const scroll = preserveScroll ? preview.scrollTop : activeTab.previewScroll;
   preview.innerHTML = renderMarkdown(activeTab.content);
   resolvePreviewAssets(preview);
@@ -185,6 +199,68 @@ function schedulePreview() {
     previewTimer = undefined;
     refreshPreview();
   }, 80);
+}
+
+function renderPlainPreview(preview: HTMLElement) {
+  preview.innerHTML = `<div class="plain-pane"><div class="plain-head">${escapeHtml(languageLabel(activeTab.path))} source</div><pre>${escapeHtml(activeTab.content)}</pre></div>`;
+}
+
+function latexBuildState(): LatexBuildState {
+  let state = latexBuilds.get(activeTab.id);
+  if (!state) {
+    state = { building: false, log: '', pdf: '', error: '' };
+    latexBuilds.set(activeTab.id, state);
+  }
+  return state;
+}
+
+function renderLatexPreview(preview: HTMLElement) {
+  const state = latexBuildState();
+  const compiler = latexCompiler;
+  const hint = compiler
+    ? `Compile with <code>${escapeHtml(compiler)}</code> and open the PDF in your system viewer.`
+    : 'No LaTeX compiler found. Install TeX Live (pdflatex, xelatex, or lualatex) and reopen this document.';
+  preview.innerHTML = `<div class="latex-pane"><div class="latex-card"><div class="latex-kicker">LaTeX document</div><h2>${escapeHtml(docName())}</h2><p>${hint}</p><div class="latex-actions"><button type="button" class="latex-build" data-action="compile-latex" ${!compiler || state.building ? 'disabled' : ''}>${state.building ? 'Compiling…' : 'Compile PDF'}</button>${state.pdf ? `<button type="button" data-action="open-latex-pdf">Open PDF</button><span class="latex-path" title="${escapeHtml(state.pdf)}">${escapeHtml(state.pdf)}</span>` : ''}</div>${state.error ? `<p class="latex-error">${escapeHtml(state.error)}</p>` : ''}${state.log ? `<details class="latex-details"${state.error ? ' open' : ''}><summary>Build log</summary><pre>${escapeHtml(state.log)}</pre></details>` : ''}</div></div>`;
+}
+
+async function openLatexPdf() {
+  const state = latexBuilds.get(activeTab.id);
+  if (!state?.pdf) return;
+  try {
+    await openSystemPath(state.pdf);
+  } catch {
+    showToast('Could not open the PDF. The build path is shown in the LaTeX panel.');
+  }
+}
+
+async function compileLatex() {
+  if (!inTauri || !activeTab.path || !isLatexDocument(activeTab.path)) return;
+  const tabId = activeTab.id;
+  const path = activeTab.path;
+  const state = latexBuildState();
+  state.building = true;
+  state.error = '';
+  state.log = 'Compiling…';
+  if (tabId === activeTab.id) refreshPreview();
+  try {
+    const result = await invoke<LatexBuildResult>('compile_latex', { path });
+    state.pdf = result.pdf;
+    state.log = result.log;
+    state.error = '';
+    showToast(`LaTeX compiled with ${result.compiler}. Opening PDF…`);
+    try {
+      await openSystemPath(result.pdf);
+    } catch {
+      showToast('PDF compiled. Use Open PDF in the LaTeX panel.');
+    }
+  } catch (error) {
+    state.error = error instanceof Error ? error.message : String(error);
+    state.log = state.error;
+    showToast('LaTeX build failed. See the build log.');
+  } finally {
+    state.building = false;
+    if (tabId === activeTab.id) refreshPreview();
+  }
 }
 
 /* ---------- Window chrome and tabs ---------- */
@@ -314,39 +390,31 @@ systemTheme.addEventListener('change', () => {
 /* ---------- Markdown help ---------- */
 
 function placeHelpNearCaret() {
-  const editor = activeEditor();
   const shell = document.querySelector<HTMLElement>('.window');
-  if (!editor || !shell || mode === 'read' || !editor.offsetParent) {
+  if (!editor || !shell || mode === 'read') {
     helpPosition = '';
     return;
   }
-  const style = getComputedStyle(editor),
-    box = editor.getBoundingClientRect(),
-    frame = shell.getBoundingClientRect();
-  const before = editor.value.slice(0, editor.selectionStart),
-    line = before.slice(before.lastIndexOf('\n') + 1);
-  const canvas = document.createElement('canvas'),
-    ctx = canvas.getContext('2d');
-  if (ctx) ctx.font = style.font;
-  const left =
-    box.left - frame.left + parseFloat(style.paddingLeft) + (ctx?.measureText(line).width ?? 0) - editor.scrollLeft;
-  const top =
-    box.top -
-    frame.top +
-    parseFloat(style.paddingTop) +
-    (before.split('\n').length - 1) * parseFloat(style.lineHeight) -
-    editor.scrollTop +
-    parseFloat(style.lineHeight);
+  const coords = editor.cursorCoords();
+  if (!coords) {
+    helpPosition = '';
+    return;
+  }
+  const frame = shell.getBoundingClientRect();
+  const left = coords.left - frame.left;
+  const top = coords.bottom - frame.top + 8;
   helpPosition = `style="--help-left:${Math.max(12, Math.min(left, frame.width - 462))}px;--help-top:${Math.max(74, Math.min(top, frame.height - 430))}px;--help-transform:none"`;
 }
 
 function helpMarkup() {
-  return `<div class="help-backdrop" data-action="close-help"></div><section class="help-box" ${helpPosition} role="dialog" aria-modal="true" aria-label="Markdown help"><div class="help-top"><div class="help-title">Markdown</div><button class="icon-btn help-close" data-action="close-help" aria-label="Close help">${icons.close}</button></div><label class="help-search">${icons.search}<input id="help-search" placeholder="Search syntax…" autocomplete="off"><kbd>ESC</kbd></label><div class="help-list">${helpItems.map((item, index) => `<button class="help-item" data-help-index="${index}" data-name="${escapeHtml(`${item.name} ${item.description} ${item.syntax}`.toLowerCase())}"><span class="help-item-name">${item.name}</span><span class="help-item-info"><code>${escapeHtml(item.syntax).replaceAll('\n', '<br>')}</code><small>${item.description}</small></span></button>`).join('')}</div></section>`;
+  return `<div class="help-backdrop" data-action="close-help"></div><section class="help-box" ${helpPosition} role="dialog" aria-modal="true" aria-label="${currentHelpTitle} help"><div class="help-top"><div class="help-title">${currentHelpTitle}</div><button class="icon-btn help-close" data-action="close-help" aria-label="Close help">${icons.close}</button></div><label class="help-search">${icons.search}<input id="help-search" placeholder="Search syntax…" autocomplete="off"><kbd>ESC</kbd></label><div class="help-list">${currentHelpItems.map((item, index) => `<button class="help-item" data-help-index="${index}" data-name="${escapeHtml(`${item.name} ${item.description} ${item.syntax}`.toLowerCase())}"><span class="help-item-name">${item.name}</span><span class="help-item-info"><code>${escapeHtml(item.syntax).replaceAll('\n', '<br>')}</code><small>${item.description}</small></span></button>`).join('')}</div></section>`;
 }
 
 function openHelp() {
   if (helpOpen) return;
-  findbar.close();
+  const latexHelp = activeTab.path ? fileKind(activeTab.path) === 'latex' : false;
+  currentHelpItems = latexHelp ? latexHelpItems : helpItems;
+  currentHelpTitle = latexHelp ? 'LaTeX' : 'Markdown';
   placeHelpNearCaret();
   helpOpen = true;
   document.querySelector<HTMLElement>('.window')?.insertAdjacentHTML('beforeend', helpMarkup());
@@ -359,7 +427,7 @@ function closeHelp(focusEditor = true) {
   helpOpen = false;
   document.querySelector('.help-backdrop')?.remove();
   document.querySelector('.help-box')?.remove();
-  if (focusEditor) activeEditor()?.focus();
+  if (focusEditor) editor?.focus();
 }
 
 function bindHelp() {
@@ -375,7 +443,7 @@ function bindHelp() {
   });
   document.querySelectorAll<HTMLElement>('[data-help-index]').forEach((button) => {
     button.addEventListener('click', () => {
-      const item = helpItems[Number(button.dataset.helpIndex)];
+      const item = currentHelpItems[Number(button.dataset.helpIndex)];
       if (!item) return;
       closeHelp(false);
       insertHelpItem(item);
@@ -385,34 +453,30 @@ function bindHelp() {
 
 function insertHelpItem(item: HelpItem) {
   if (mode === 'read') setMode('split');
-  const editor = activeEditor();
   if (!editor) return;
-  const start = editor.selectionStart,
-    end = editor.selectionEnd;
-  const selected = editor.value.slice(start, end);
+  const { from, to } = editor.getSelection();
+  const selected = editor.getValue().slice(from, to);
   let snippet = item.insert;
-  let selectionStart = start;
-  let selectionEnd = start + snippet.length;
+  let selectionStart = from;
+  let selectionEnd = from + snippet.length;
   if (item.wrap) {
     const [before, after, placeholder] = item.wrap;
     const body = selected || placeholder;
     snippet = `${before}${body}${after}`;
     if (selected) {
-      selectionStart = start + before.length;
+      selectionStart = from + before.length;
       selectionEnd = selectionStart + body.length;
     } else {
-      selectionStart = start + before.length;
+      selectionStart = from + before.length;
       selectionEnd = selectionStart + placeholder.length;
     }
   }
-  editor.value = editor.value.slice(0, start) + snippet + editor.value.slice(end);
-  editor.setSelectionRange(selectionStart, selectionEnd);
-  activeTab.content = editor.value;
+  editor.replaceRange(from, to, snippet, selectionStart, selectionEnd);
+  activeTab.content = editor.getValue();
   activeTab.dirty = activeTab.content !== activeTab.savedContent;
   updateChrome();
   renderTabs();
-  editor.focus();
-  refreshPreview();
+  if (!isLatexDocument(activeTab.path)) refreshPreview();
   scheduleSessionSave();
   scheduleAutosave();
 }
@@ -424,7 +488,6 @@ function setSplitColumns(workspace: HTMLElement) {
 }
 
 function setMode(next: ViewMode) {
-  findbar.close();
   closeHelp(false);
   closeAppMenu();
   mode = next;
@@ -440,7 +503,7 @@ function setMode(next: ViewMode) {
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
   });
-  if (mode !== 'read') activeEditor()?.focus();
+  if (mode !== 'read') editor?.focus();
 }
 
 function toggleAppMenu() {
@@ -459,6 +522,19 @@ function closeAppMenu() {
   document.querySelector<HTMLElement>('[data-action="menu"]')?.setAttribute('aria-expanded', 'false');
 }
 
+function openEditorSearch(replace = false) {
+  if (mode === 'read') setMode('split');
+  editor?.focus();
+  if (replace) editor?.openReplace();
+  else editor?.openSearch();
+}
+
+function selectAllOccurrences() {
+  if (mode === 'read') setMode('split');
+  editor?.focus();
+  return editor?.selectAllOccurrences() ?? false;
+}
+
 function toggleSidebar() {
   settings = { ...settings, sidebarOpen: !settings.sidebarOpen };
   saveSettings(settings);
@@ -470,7 +546,8 @@ function toggleSidebar() {
 /* ---------- Shell rendering and event wiring ---------- */
 
 function renderApp() {
-  findbar.close();
+  editor?.destroy();
+  editor = null;
   closeAppMenu();
   helpOpen = false;
   applyAppearance();
@@ -482,14 +559,14 @@ function renderApp() {
     <div class="top-actions">
      <div class="mode-switch"><button data-mode="read" aria-pressed="${mode === 'read'}" class="${mode === 'read' ? 'active' : ''}">Read</button><button data-mode="focus" aria-pressed="${mode === 'focus'}" class="${mode === 'focus' ? 'active' : ''}">Focus</button><button data-mode="split" aria-pressed="${mode === 'split'}" class="${mode === 'split' ? 'active' : ''}">Split</button></div>
      <button class="icon-btn ${settings.sidebarOpen ? 'active' : ''}" data-action="sidebar" title="Files sidebar (Ctrl+B)" aria-label="Toggle files sidebar">${icons.sidebar}</button>
-     <button class="icon-btn" data-action="help" title="Markdown help (Ctrl+/)" aria-label="Markdown help">${icons.search}</button>
+     <button class="icon-btn" data-action="help" title="${isLatexDocument(activeTab.path) ? 'LaTeX' : 'Markdown'} help (Ctrl+/)" aria-label="Toggle help">${icons.search}</button>
      <span class="divider"></span>
      <button class="icon-btn" data-action="new" title="New tab (Ctrl+N)" aria-label="New tab">${icons.plus}</button>
      <button class="icon-btn" data-action="open" title="Open (Ctrl+O)" aria-label="Open">${icons.folder}</button>
      <button class="icon-btn" data-action="save" title="Save (Ctrl+S)" aria-label="Save">${icons.save}</button>
      <button class="icon-btn theme-toggle" data-action="theme" title="Toggle appearance" aria-label="Toggle appearance">${resolvedTheme === 'light' ? icons.moon : icons.sun}</button>
      <button class="export-btn" data-action="pdf" title="Print or save as PDF (Ctrl+P)">${icons.pdf}<span>PDF</span></button>
-     <div class="app-menu-wrap"><button class="icon-btn" data-action="menu" title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded="false">${icons.menu}</button><div class="app-menu" role="menu" hidden><button role="menuitem" data-action="new">New tab<span>Ctrl+N</span></button><button role="menuitem" data-action="save-as">Save as…<span>Ctrl+Shift+S</span></button><button role="menuitem" data-action="close-tab">Close tab<span>Ctrl+W</span></button><button role="menuitem" data-action="open-folder">Open folder…</button><div id="recent-section" ${recentFiles.length ? '' : 'hidden'}><div class="menu-label">Recent</div><div id="recent-files">${recentMarkup()}</div></div><div class="menu-sep"></div><button role="menuitem" data-action="settings">Settings<span>Ctrl+,</span></button><button role="menuitem" data-action="help">Markdown guide<span>Ctrl+/</span></button><button role="menuitem" data-action="pdf">Print / PDF<span>Ctrl+P</span></button></div></div>
+     <div class="app-menu-wrap"><button class="icon-btn" data-action="menu" title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded="false">${icons.menu}</button><div class="app-menu" role="menu" hidden><button role="menuitem" data-action="new">New tab<span>Ctrl+N</span></button><button role="menuitem" data-action="save-as">Save as…<span>Ctrl+Shift+S</span></button><button role="menuitem" data-action="close-tab">Close tab<span>Ctrl+W</span></button><button role="menuitem" data-action="open-folder">Open folder…</button><div class="menu-sep"></div><button role="menuitem" data-action="find">Find…<span>Ctrl+F</span></button><button role="menuitem" data-action="replace">Replace…<span>Ctrl+H</span></button><button role="menuitem" data-action="select-all-occurrences">Change all occurrences<span>Ctrl+Shift+L</span></button><button role="menuitem" data-action="goto-line">Go to line…<span>Ctrl+G</span></button>${isLatexDocument(activeTab.path) ? '<button role="menuitem" data-action="compile-latex">Compile LaTeX…</button>' : ''}<div id="recent-section" ${recentFiles.length ? '' : 'hidden'}><div class="menu-label">Recent</div><div id="recent-files">${recentMarkup()}</div></div><div class="menu-sep"></div><button role="menuitem" data-action="settings">Settings<span>Ctrl+,</span></button><button role="menuitem" data-action="help">${isLatexDocument(activeTab.path) ? 'LaTeX guide' : 'Markdown guide'}<span>Ctrl+/</span></button><button role="menuitem" data-action="pdf">Print / PDF<span>Ctrl+P</span></button></div></div>
     </div>
    </header>
    <nav class="tabbar" aria-label="Open documents"><div class="tabs" id="tabs">${tabsMarkup()}</div><button class="tab-new" data-action="new" title="New tab (Ctrl+N)" aria-label="New tab">${icons.plus}</button></nav>
@@ -498,19 +575,47 @@ function renderApp() {
       <div class="sidebar-head"><span id="folder-name" title="${escapeHtml(explorer.root)}">${escapeHtml(explorer.root ? baseName(explorer.root, 'Folder') : 'Files')}</span><div class="sidebar-actions"><button class="icon-btn" data-action="open-folder" title="Open folder" aria-label="Open folder">${icons.folder}</button><button class="icon-btn" data-action="refresh-folder" title="Refresh folder" aria-label="Refresh folder">${icons.refresh}</button><button class="icon-btn" data-action="toggle-sidebar" title="Hide sidebar (Ctrl+B)" aria-label="Hide sidebar">${icons.close}</button></div></div>
       <div class="file-tree" id="file-tree">${explorer.render()}</div>
     </aside>
-    <section class="workspace mode-${mode}"><div class="editor-pane"><textarea id="editor" spellcheck="false" aria-label="Markdown editor">${escapeHtml(activeTab.content)}</textarea></div><div class="pane-divider" role="separator" aria-orientation="vertical" aria-label="Resize panes" tabindex="0"></div><div class="preview-pane"><article class="rendered" id="preview"></article></div></section>
+    <section class="workspace mode-${mode}"><div class="editor-pane"><div id="editor-host" class="editor-host"></div></div><div class="pane-divider" role="separator" aria-orientation="vertical" aria-label="Resize panes" tabindex="0"></div><div class="preview-pane"><article class="rendered" id="preview"></article></div></section>
    </div>
    <footer class="bottom-bar"><span>${statusDot()}${statusText()}</span><span id="stats">${statsText()}</span></footer>
    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
   </main>`;
   bind();
+  const editorHost = document.querySelector<HTMLElement>('#editor-host');
+  if (editorHost) {
+    editor = createEditor(editorHost, {
+      onChange: (value) => {
+        activeTab.content = value;
+        activeTab.dirty = value !== activeTab.savedContent;
+        updateChrome();
+        renderTabs();
+        if (!isLatexDocument(activeTab.path)) schedulePreview();
+        scheduleSessionSave();
+        scheduleAutosave();
+      },
+      onSelectionChange: (from, to) => {
+        activeTab.selectionStart = from;
+        activeTab.selectionEnd = to;
+      },
+      onScroll: (top) => {
+        activeTab.editorScroll = top;
+      },
+    });
+    editor.showTab(
+      activeTab.id,
+      activeTab.content,
+      activeTab.path,
+      { from: activeTab.selectionStart, to: activeTab.selectionEnd },
+      activeTab.editorScroll,
+    );
+  }
   if (mode === 'split') setSplitColumns(document.querySelector<HTMLElement>('.workspace')!);
   refreshPreview(false);
   const preview = document.querySelector<HTMLElement>('#preview');
   if (preview) preview.scrollTop = activeTab.previewScroll;
   updateChrome();
   applySidebarVisibility();
-  if (mode !== 'read') activeEditor()?.focus();
+  if (mode !== 'read') editor?.focus();
   if (pendingToast) {
     const toast = pendingToast;
     pendingToast = '';
@@ -519,24 +624,6 @@ function renderApp() {
 }
 
 function bind() {
-  const editor = activeEditor();
-  editor?.addEventListener('input', () => {
-    activeTab.content = editor.value;
-    activeTab.dirty = activeTab.content !== activeTab.savedContent;
-    updateChrome();
-    renderTabs();
-    schedulePreview();
-    scheduleSessionSave();
-    scheduleAutosave();
-  });
-  editor?.addEventListener('scroll', () => {
-    activeTab.editorScroll = editor.scrollTop;
-  });
-  editor?.addEventListener('select', () => {
-    activeTab.selectionStart = editor.selectionStart;
-    activeTab.selectionEnd = editor.selectionEnd;
-  });
-
   const workspace = document.querySelector<HTMLElement>('.workspace'),
     splitter = document.querySelector<HTMLElement>('.pane-divider');
   if (workspace && splitter) {
@@ -638,6 +725,25 @@ function bind() {
         case 'refresh-folder':
           await explorer.refresh();
           break;
+        case 'find':
+          openEditorSearch(false);
+          break;
+        case 'replace':
+          openEditorSearch(true);
+          break;
+        case 'select-all-occurrences':
+          selectAllOccurrences();
+          break;
+        case 'goto-line':
+          if (mode === 'read') setMode('split');
+          editor?.openGoto();
+          break;
+        case 'compile-latex':
+          await compileLatex();
+          break;
+        case 'open-latex-pdf':
+          await openLatexPdf();
+          break;
       }
     });
   });
@@ -663,23 +769,25 @@ function bind() {
 /* ---------- Tabs and session ---------- */
 
 function captureActiveTabView() {
-  const editor = activeEditor();
   if (editor) {
-    activeTab.editorScroll = editor.scrollTop;
-    activeTab.selectionStart = editor.selectionStart;
-    activeTab.selectionEnd = editor.selectionEnd;
+    const selection = editor.getSelection();
+    activeTab.selectionStart = selection.from;
+    activeTab.selectionEnd = selection.to;
+    activeTab.editorScroll = editor.getScrollTop();
   }
   const preview = document.querySelector<HTMLElement>('#preview');
   if (preview) activeTab.previewScroll = preview.scrollTop;
 }
 
 function loadActiveTab(focus = true) {
-  const editor = activeEditor();
-  if (editor) {
-    editor.value = activeTab.content;
-    editor.scrollTop = activeTab.editorScroll;
-    editor.setSelectionRange(activeTab.selectionStart, activeTab.selectionEnd);
-  }
+  editor?.showTab(
+    activeTab.id,
+    activeTab.content,
+    activeTab.path,
+    { from: activeTab.selectionStart, to: activeTab.selectionEnd },
+    activeTab.editorScroll,
+  );
+  editor?.setLanguage(activeTab.path);
   refreshPreview(false);
   const preview = document.querySelector<HTMLElement>('#preview');
   if (preview) preview.scrollTop = activeTab.previewScroll;
@@ -696,7 +804,6 @@ function activateTab(id: string) {
   captureActiveTabView();
   if (settings.autosave) void autosaveTab(activeTab);
   activeTab = next;
-  findbar.close();
   loadActiveTab();
   scheduleSessionSave();
 }
@@ -716,6 +823,8 @@ async function closeTab(id: string) {
   if (!tab) return;
   if (tab.dirty && !(await confirmDiscardTab(tab))) return;
   const index = tabs.indexOf(tab);
+  editor?.forgetTab(tab.id);
+  latexBuilds.delete(tab.id);
   tabs = tabs.filter((candidate) => candidate !== tab);
   if (tabs.length === 0) {
     activeTab = createTab('');
@@ -745,6 +854,17 @@ async function confirmDiscardTab(tab: Tab) {
 /* ---------- Preview links and close confirmation ---------- */
 
 async function handlePreviewClick(event: Event) {
+  const action = (event.target as HTMLElement).closest<HTMLElement>('[data-action]')?.dataset.action;
+  if (action === 'compile-latex') {
+    event.preventDefault();
+    await compileLatex();
+    return;
+  }
+  if (action === 'open-latex-pdf') {
+    event.preventDefault();
+    await openLatexPdf();
+    return;
+  }
   const anchor = (event.target as HTMLElement).closest('a');
   if (!anchor) return;
   const href = anchor.getAttribute('href') ?? '';
@@ -767,7 +887,7 @@ async function handlePreviewClick(event: Event) {
     return;
   }
   const local = href.split(/[?#]/)[0];
-  if (!/\.(?:md|markdown|mdown|txt)$/i.test(local) || !activeTab.path) return;
+  if (!isSupportedFile(local) || !activeTab.path) return;
   let target = local;
   try {
     target = decodeURIComponent(local);
@@ -784,7 +904,6 @@ function askCloseConfirmation(dirtyTabs: Tab[]) {
   closePromptOpen = true;
   closeHelp(false);
   closeAppMenu();
-  findbar.close();
   const names = dirtyTabs.map((tab) => tabLabel(tab, tabs.indexOf(tab), tabs.length));
   const detail =
     names.length === 1
@@ -895,7 +1014,12 @@ async function openFile() {
   }
   const selected = await open({
     multiple: false,
-    filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'txt'] }],
+    filters: [
+      {
+        name: 'Markdown and LaTeX',
+        extensions: ['md', 'markdown', 'mdown', 'txt', 'tex', 'latex', 'bib', 'sty', 'cls'],
+      },
+    ],
   });
   if (typeof selected === 'string') await openPath(selected);
 }
@@ -913,7 +1037,7 @@ async function saveFile(choosePath: boolean) {
   let path = choosePath ? '' : tab.path;
   if (!path) {
     const selected = await save({
-      filters: [{ name: 'Markdown', extensions: ['md'] }],
+      filters: [{ name: 'Text and Markdown', extensions: ['md', 'txt', 'tex', 'latex'] }],
       defaultPath: tab.path || 'Untitled.md',
     });
     if (!selected) return false;
@@ -932,7 +1056,10 @@ async function saveFile(choosePath: boolean) {
   tab.dirty = tab.content !== tab.savedContent;
   await allowDocumentDir(path);
   await rememberRecent(path);
-  if (path !== previousPath) refreshPreview();
+  if (path !== previousPath) {
+    editor?.setLanguage(path);
+    refreshPreview();
+  }
   updateChrome();
   renderTabs();
   renderSidebar();
@@ -1098,10 +1225,6 @@ async function installWindowHooks() {
 document.addEventListener('keydown', (event) => {
   if (document.querySelector('.settings-backdrop') || document.querySelector('.close-backdrop')) return;
   if (event.key === 'Escape') {
-    if (findbar.isOpen()) {
-      findbar.close();
-      return;
-    }
     const menu = document.querySelector<HTMLElement>('.app-menu');
     if (menu && !menu.hidden) {
       closeAppMenu();
@@ -1129,12 +1252,23 @@ document.addEventListener('keydown', (event) => {
   } else if (key === 'p') {
     event.preventDefault();
     window.print();
-  } else if (key === 'f') {
+  } else if (key === 'f' || key === 'h') {
+    if ((event.target as HTMLElement).closest('.cm-editor')) return;
     event.preventDefault();
-    findbar.open(false);
-  } else if (key === 'h') {
+    openEditorSearch(key === 'h');
+  } else if (key === 'l' && event.shiftKey) {
+    if ((event.target as HTMLElement).closest('.cm-editor')) return;
     event.preventDefault();
-    findbar.open(true);
+    selectAllOccurrences();
+  } else if (key === 'f2' && (event.ctrlKey || event.metaKey)) {
+    if ((event.target as HTMLElement).closest('.cm-editor')) return;
+    event.preventDefault();
+    selectAllOccurrences();
+  } else if (key === 'g') {
+    if ((event.target as HTMLElement).closest('.cm-editor')) return;
+    event.preventDefault();
+    if (mode === 'read') setMode('split');
+    editor?.openGoto();
   } else if (key === 'b') {
     event.preventDefault();
     toggleSidebar();
@@ -1161,6 +1295,13 @@ document.addEventListener('click', (event) => {
 async function initialize() {
   resolvedTheme = resolveTheme(settings.theme);
   applyAppearance();
+  if (inTauri) {
+    try {
+      latexCompiler = await invoke<string | null>('latex_compiler');
+    } catch {
+      latexCompiler = null;
+    }
+  }
   const restored = await restoreTabs();
   if (restored) {
     tabs = restored.tabs;

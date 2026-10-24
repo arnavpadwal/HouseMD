@@ -15,15 +15,15 @@ access, and system-browser integration.
 
 ## Version
 
-Version 2.0.0 is the current public baseline (tabs, session recovery, autosave, find/replace,
-settings, and folder sidebar).
+Version 2.5.0 is the current public baseline (CodeMirror editor, line numbers, search/multi-cursor,
+LaTeX editing and compilation, tabs, recovery, settings, and folder sidebar).
 
 ## Commands
 
 ```sh
 pnpm install        # install frontend dependencies
 pnpm tauri dev      # run the desktop app with Vite
-pnpm check          # tsc --noEmit + 16 tests + Prettier check
+pnpm check          # tsc --noEmit + 18 tests + Prettier check
 pnpm test           # renderer tests only (Node type stripping)
 pnpm format         # format the repo with Prettier
 pnpm build          # typecheck + production frontend in dist/
@@ -40,9 +40,10 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
 - `src/content.ts` owns the sample document, SVG icon strings, and Markdown guide entries.
 - `src/model.ts` owns tab, settings, recent-file, and session types/storage. `src/paths.ts` has
   cross-platform path helpers.
-- `src/explorer.ts` renders the folder sidebar, `src/findbar.ts` owns find/replace, and
+- `src/editor.ts` owns the CodeMirror 6 editor, language configuration, search, multi-cursor,
+  line numbers, and LaTeX language mode. `src/explorer.ts` renders the folder sidebar and
   `src/settings-panel.ts` owns the appearance/file settings dialog.
-- `src/style.css` is a sectioned stylesheet (tokens, shell, workspace, Markdown, overlays, print). Never reintroduce global `svg { width }` sizing; it breaks Mermaid and KaTeX.
+- `src/style.css` is a sectioned stylesheet (tokens, shell, workspace, CodeMirror host, Markdown, LaTeX panel, overlays, print). Never reintroduce global `svg { width }` sizing; it breaks Mermaid and KaTeX.
 - `src/markdown.ts` is the pure renderer: it extracts math before Markdown, protects code
   spans/fences from the math pass, converts empty GitHub-style anchors into invisible
   targets, adds heading ids for TOC links, highlights fenced code with highlight.js, and
@@ -60,10 +61,11 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
   - an in-app close confirmation (not a native dialog, which can deadlock while a
     close request is pending)
 - `src-tauri/src/lib.rs` registers plugins (single-instance first) and the
-  `allow_document_dir` / `launch_file` commands. `allow_document_dir` extends the
-  asset and fs scopes to the folder of the opened/saved document.
+  `allow_document_dir`, `launch_file`, `latex_compiler`, and `compile_latex` commands.
+  `allow_document_dir` extends the asset and fs scopes to the opened/saved document folder;
+  `compile_latex` runs pdflatex/xelatex/lualatex with shell escape disabled.
 - `src-tauri/capabilities/default.json` grants core window title/destroy, dialog,
-  fs, home-recursive fs scope, and opener permissions.
+  fs (including read-dir), home-recursive fs scope, opener URL/path, and single-instance support.
 - `src-tauri/tauri.conf.json` defines the window, CSP, asset protocol, and bundling.
 
 ## Conventions and gotchas
@@ -89,5 +91,5 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
   commit them.
 - CI lives in `.github/workflows/ci.yml` and runs frontend checks, Rust fmt/clippy, and a
   Tauri build on `main` and `develop`.
-- Version 2.0.0 is the public baseline. Keep `main` release-ready and integrate work on
+- Version 2.5.0 is the public baseline. Keep `main` release-ready and integrate work on
   `develop`.

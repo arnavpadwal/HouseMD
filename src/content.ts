@@ -136,3 +136,71 @@ export const helpItems: HelpItem[] = [
     insert: '\n---\n',
   },
 ];
+
+export const latexHelpItems: HelpItem[] = [
+  {
+    name: 'Section',
+    syntax: '\\section{Heading}',
+    description: 'Start a numbered section',
+    insert: '\n\\section{Heading}\n',
+  },
+  {
+    name: 'Bold',
+    syntax: '\\textbf{bold}',
+    description: 'Make text stand out',
+    insert: '\\textbf{bold}',
+    wrap: ['\\textbf{', '}', 'bold'],
+  },
+  {
+    name: 'Italic',
+    syntax: '\\textit{italic}',
+    description: 'Add emphasis',
+    insert: '\\textit{italic}',
+    wrap: ['\\textit{', '}', 'italic'],
+  },
+  {
+    name: 'Inline math',
+    syntax: '$E = mc^2$',
+    description: 'Write math in a line',
+    insert: '$E = mc^2$',
+    wrap: ['$', '$', 'E = mc^2'],
+  },
+  {
+    name: 'Display math',
+    syntax: '\\[\n\\int_0^1 x^2 \\, dx = \\frac{1}{3}\n\\]',
+    description: 'A centered equation',
+    insert: '\n\\[\n  \\int_0^1 x^2 \\, dx = \\frac{1}{3}\n\\]\n',
+  },
+  {
+    name: 'Itemize',
+    syntax: '\\begin{itemize}\n  \\item First\n  \\item Second\n\\end{itemize}',
+    description: 'A bullet list',
+    insert: '\n\\begin{itemize}\n  \\item First item\n  \\item Second item\n\\end{itemize}\n',
+  },
+  {
+    name: 'Equation',
+    syntax: '\\begin{equation}\n  E = mc^2\n\\end{equation}',
+    description: 'A numbered equation',
+    insert: '\n\\begin{equation}\n  E = mc^2\n\\end{equation}\n',
+  },
+  {
+    name: 'Figure',
+    syntax:
+      '\\begin{figure}[h]\n  \\centering\n  \\includegraphics{image.png}\n  \\caption{Description}\n\\end{figure}',
+    description: 'Insert an image with a caption',
+    insert:
+      '\n\\begin{figure}[h]\n  \\centering\n  \\includegraphics[width=0.8\\linewidth]{image.png}\n  \\caption{Description}\n  \\label{fig:example}\n\\end{figure}\n',
+  },
+  {
+    name: 'Label / ref',
+    syntax: '\\label{sec:intro} · \\ref{sec:intro}',
+    description: 'Cross-reference a section or figure',
+    insert: '\\label{sec:intro}',
+  },
+  {
+    name: 'Document',
+    syntax: '\\documentclass{article}\n\\begin{document}\n\n\\end{document}',
+    description: 'Start a complete LaTeX document',
+    insert: '\\documentclass{article}\n\n\\begin{document}\n\n\\end{document}\n',
+  },
+];

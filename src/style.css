@@ -398,24 +398,14 @@ button svg,
   background: var(--accent);
 }
 
-#editor {
+.editor-host {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  padding: 22px 26px;
-  border: 0;
-  outline: 0;
-  resize: none;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--mono-font);
-  font-size: var(--editor-font-size);
-  font-weight: 500;
-  line-height: 1.75;
-  tab-size: 2;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow: hidden;
+}
+
+.editor-host .cm-editor {
+  height: 100%;
 }
 
 .preview-pane {
@@ -1356,79 +1346,6 @@ button svg,
   color: var(--accent);
 }
 
-/* Find and replace */
-.findbar {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 7px 9px;
-  border-bottom: 1px solid var(--line);
-  background: var(--paper);
-}
-
-.findbar[hidden],
-.replace-row[hidden] {
-  display: none;
-}
-
-.find-row,
-.replace-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.find-row input,
-.replace-row input {
-  flex: 1;
-  min-width: 0;
-  height: 26px;
-  padding: 0 8px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  outline: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-size: 11.5px;
-}
-
-.find-row input:focus,
-.replace-row input:focus {
-  border-color: var(--accent);
-}
-
-.find-count {
-  min-width: 54px;
-  color: var(--muted);
-  font-family: var(--mono-font);
-  font-size: 10.5px;
-  text-align: center;
-}
-
-.findbar button {
-  height: 26px;
-  min-width: 26px;
-  padding: 0 7px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--bg);
-  color: var(--muted);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.findbar button:hover {
-  background: var(--soft);
-  color: var(--ink);
-}
-
-.findbar button.toggle.active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
 /* Menu additions */
 .app-menu {
   max-height: min(72vh, 560px);
@@ -1728,7 +1645,6 @@ button svg,
   }
   .tabbar,
   .sidebar,
-  .findbar,
   .toast,
   .settings-backdrop {
     display: none !important;
@@ -1737,4 +1653,161 @@ button svg,
 
 .close-backdrop {
   z-index: 80;
+}
+
+/* ==========================================================================
+   LaTeX workspace
+   ========================================================================== */
+
+.latex-pane {
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(30px, 6vh, 70px) clamp(20px, 5vw, 48px);
+}
+
+.latex-card {
+  width: min(560px, 100%);
+  padding: 26px 28px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 20px 55px #0000001a;
+}
+
+.latex-kicker {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.latex-card h2 {
+  margin: 6px 0 10px;
+  color: var(--heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+
+.latex-card p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.latex-card p code {
+  color: var(--code-text);
+  font-family: var(--mono-font);
+  font-size: 0.9em;
+}
+
+.latex-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.latex-actions button {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.latex-actions button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.latex-actions .latex-build {
+  border-color: transparent;
+  background: var(--accent);
+  color: #1f1208;
+  font-weight: 700;
+}
+
+.latex-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.latex-error {
+  margin-top: 16px !important;
+  padding: 10px 12px;
+  border: 1px solid var(--syntax-deletion);
+  border-radius: 7px;
+  background: #dc26261a;
+  color: var(--syntax-deletion) !important;
+  font-family: var(--mono-font);
+  font-size: 11.5px !important;
+  white-space: pre-wrap;
+}
+
+.latex-details {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.latex-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.latex-details pre {
+  max-height: 260px;
+  margin: 8px 0 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--code);
+  color: var(--ink);
+  font-family: var(--mono-font);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.latex-path {
+  align-self: center;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--mono-font);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plain-pane {
+  padding: 28px clamp(24px, 5vw, 56px);
+}
+
+.plain-head {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+.plain-pane pre {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--mono-font);
+  font-size: calc(var(--preview-font-size) * 0.82);
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

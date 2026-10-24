@@ -25,7 +25,7 @@ export interface Explorer {
 }
 
 const HIDDEN_NAMES = new Set(['.git', 'node_modules', '.DS_Store']);
-const MARKDOWN_FILE = /\.(?:md|markdown|mdown|txt)$/i;
+const SUPPORTED_FILE = /\.(?:md|markdown|mdown|txt|tex|latex|bib|sty|cls)$/i;
 
 export function createExplorer(options: ExplorerOptions): Explorer {
   let root = '';
@@ -38,7 +38,7 @@ export function createExplorer(options: ExplorerOptions): Explorer {
       const listing = (await readDir(directory))
         .filter(
           (entry) =>
-            !HIDDEN_NAMES.has(entry.name) && (entry.isDirectory || (entry.isFile && MARKDOWN_FILE.test(entry.name))),
+            !HIDDEN_NAMES.has(entry.name) && (entry.isDirectory || (entry.isFile && SUPPORTED_FILE.test(entry.name))),
         )
         .sort(
           (a, b) =>
@@ -98,7 +98,7 @@ export function createExplorer(options: ExplorerOptions): Explorer {
     }
     if (!listing.length) {
       return depth === 0
-        ? `<div class="tree-empty"><p>No Markdown files here.</p><button type="button" class="tree-action" data-tree-action="open-folder">Choose another folder</button></div>`
+        ? `<div class="tree-empty"><p>No supported text files here.</p><button type="button" class="tree-action" data-tree-action="open-folder">Choose another folder</button></div>`
         : '';
     }
     return listing

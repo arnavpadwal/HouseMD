@@ -4,6 +4,37 @@ All notable changes to HouseMD are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] - 2026-10-25
+
+The editor release: CodeMirror, line numbers, multi-cursor search, and LaTeX.
+
+### Added
+
+- CodeMirror 6 editor with line numbers, folding, bracket matching, active-line highlighting, and undo history.
+- Language-aware editor highlighting for Markdown, LaTeX, and plain text.
+- CodeMirror search/replace panel with case, regexp, whole-word, next/previous, replace, and replace all.
+- Select all occurrences / change all occurrences via `Ctrl+Shift+L`, `Ctrl+F2`, and the action menu.
+- Select next occurrence (`Ctrl+D`) and go-to-line (`Ctrl+G`).
+- LaTeX document support for `.tex` / `.latex`, with syntax highlighting for `.sty` / `.cls` and text support for `.bib`.
+- LaTeX compiler detection and PDF compilation through `pdflatex`, `xelatex`, or `lualatex`.
+- LaTeX build panel with compiler status, build log, generated PDF path, and open-PDF action.
+- LaTeX-specific Markdown guide entries.
+- LaTeX files in the open dialog, CLI launcher, recent files, and folder sidebar.
+
+### Changed
+
+- Replaced the textarea editor with CodeMirror while preserving tabs, session recovery, autosave, help insertion, and preview synchronization.
+- Search and replace now uses the CodeMirror panel instead of the custom find bar.
+- File filters now accept Markdown, LaTeX, bibliography, class, style, and text files.
+- `Ctrl+/` remains the Markdown/LaTeX guide shortcut; CodeMirror's comment toggle was intentionally not bound.
+- Status bar now shows the active language.
+
+### Fixed
+
+- Search-panel buttons render with readable text in dark mode.
+- LaTeX compilation runs with shell escape disabled and reports build failures in-app.
+- Opening a generated PDF without a system viewer no longer blocks the build result.
+
 ## [2.0.0] - 2026-10-24
 
 The workspace release: tabs, recovery, search, settings, and folder browsing.

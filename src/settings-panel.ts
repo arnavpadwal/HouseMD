@@ -78,7 +78,7 @@ export function openSettingsPanel(initial: Settings, apply: (next: Settings) => 
   const close = () => {
     controller.abort();
     overlay?.remove();
-    document.querySelector<HTMLTextAreaElement>('#editor')?.focus();
+    document.querySelector<HTMLElement>('.cm-content')?.focus();
   };
 
   const update = (patch: Partial<Settings>) => {
