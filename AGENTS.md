@@ -13,12 +13,17 @@ access, and system-browser integration.
 - markdown-it + markdown-it-task-lists, KaTeX, Mermaid, highlight.js
 - pnpm; font packages from Fontsource; Prettier for formatting
 
+## Version
+
+Version 2.0.0 is the current public baseline (tabs, session recovery, autosave, find/replace,
+settings, and folder sidebar).
+
 ## Commands
 
 ```sh
 pnpm install        # install frontend dependencies
 pnpm tauri dev      # run the desktop app with Vite
-pnpm check          # tsc --noEmit + node --test + Prettier check
+pnpm check          # tsc --noEmit + 16 tests + Prettier check
 pnpm test           # renderer tests only (Node type stripping)
 pnpm format         # format the repo with Prettier
 pnpm build          # typecheck + production frontend in dist/
@@ -33,6 +38,10 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
 
 - `index.html` mounts `#app`; `src/main.ts` renders the entire shell and owns app state.
 - `src/content.ts` owns the sample document, SVG icon strings, and Markdown guide entries.
+- `src/model.ts` owns tab, settings, recent-file, and session types/storage. `src/paths.ts` has
+  cross-platform path helpers.
+- `src/explorer.ts` renders the folder sidebar, `src/findbar.ts` owns find/replace, and
+  `src/settings-panel.ts` owns the appearance/file settings dialog.
 - `src/style.css` is a sectioned stylesheet (tokens, shell, workspace, Markdown, overlays, print). Never reintroduce global `svg { width }` sizing; it breaks Mermaid and KaTeX.
 - `src/markdown.ts` is the pure renderer: it extracts math before Markdown, protects code
   spans/fences from the math pass, converts empty GitHub-style anchors into invisible
@@ -80,5 +89,5 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
   commit them.
 - CI lives in `.github/workflows/ci.yml` and runs frontend checks, Rust fmt/clippy, and a
   Tauri build on `main` and `develop`.
-- Version 1.0.0 is the public baseline. Keep `main` release-ready and integrate work on
+- Version 2.0.0 is the public baseline. Keep `main` release-ready and integrate work on
   `develop`.

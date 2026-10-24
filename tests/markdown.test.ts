@@ -7,7 +7,7 @@ test('renders headings, emphasis, and task lists', () => {
   assert.match(html, /<h1 id="title">Title<\/h1>/);
   assert.match(html, /<strong>bold<\/strong>/);
   assert.match(html, /<em>italic<\/em>/);
-  assert.match(html, /checked=""[^>]*type="checkbox"/);
+  assert.match(html, /checked[^>]*type="checkbox"/);
   assert.match(html, /type="checkbox"/);
 });
 
@@ -70,10 +70,16 @@ test('keeps anchors inside code blocks literal', () => {
   assert.match(html, /hljs-tag/);
 });
 
-test('disables raw HTML', () => {
-  const html = renderMarkdown('<script>alert(1)</script>');
-  assert.doesNotMatch(html, /<script>/);
-  assert.match(html, /&lt;script&gt;/);
+test('sanitizes raw HTML while allowing safe README markup', () => {
+  const html = renderMarkdown(
+    '<script>alert(1)</script><p align="center"><img src="x.png" onerror="alert(1)" width="120"></p>',
+  );
+  assert.doesNotMatch(html, /<script/);
+  assert.doesNotMatch(html, /alert\(1\)/);
+  assert.doesNotMatch(html, /onerror/);
+  assert.match(html, /align="center"/);
+  assert.match(html, /<img[^>]*src="x.png"/);
+  assert.match(html, /width="120"/);
 });
 
 test('escapes attribute-sensitive characters', () => {

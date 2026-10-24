@@ -12,6 +12,7 @@
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:scope-home-recursive",
-    "opener:default"
+    "opener:default",
+    "fs:allow-read-dir"
   ]
 }

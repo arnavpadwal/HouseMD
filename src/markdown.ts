@@ -2,6 +2,7 @@ import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 import katex from 'katex';
 import hljs from 'highlight.js/lib/common';
+import sanitizeHtml from 'sanitize-html';
 
 export function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -36,7 +37,7 @@ const languageAliases: Record<string, string> = {
 };
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   typographer: true,
   breaks: false,
@@ -126,7 +127,83 @@ export function renderMarkdown(source: string) {
     text = text.split(`HOUSEMDCODE${index}TOKEN`).join(snippet);
   });
 
-  let html = md.render(text, { explicitIds, usedIds: new Set<string>() });
+  let html = sanitizeHtml(md.render(text, { explicitIds, usedIds: new Set<string>() }), {
+    allowedTags: [
+      'a',
+      'p',
+      'br',
+      'hr',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'strong',
+      'em',
+      'del',
+      's',
+      'u',
+      'sup',
+      'sub',
+      'small',
+      'mark',
+      'blockquote',
+      'ul',
+      'ol',
+      'li',
+      'dl',
+      'dt',
+      'dd',
+      'table',
+      'thead',
+      'tbody',
+      'tfoot',
+      'tr',
+      'th',
+      'td',
+      'code',
+      'pre',
+      'span',
+      'div',
+      'img',
+      'details',
+      'summary',
+      'kbd',
+      'figure',
+      'figcaption',
+      'input',
+    ],
+    allowedAttributes: {
+      a: ['href', 'title', 'id', 'name', 'target', 'rel'],
+      img: ['src', 'alt', 'title', 'width', 'height', 'align'],
+      p: ['align'],
+      div: ['align'],
+      h1: ['id', 'align'],
+      h2: ['id', 'align'],
+      h3: ['id', 'align'],
+      h4: ['id', 'align'],
+      h5: ['id', 'align'],
+      h6: ['id', 'align'],
+      table: ['align'],
+      th: ['align', 'colspan', 'rowspan'],
+      td: ['align', 'colspan', 'rowspan'],
+      details: ['open'],
+      input: ['type', 'checked', 'disabled'],
+    },
+    allowedClasses: {
+      span: ['hljs-*'],
+      code: ['language-*'],
+      pre: ['hljs'],
+      div: ['mermaid'],
+      input: ['task-list-item-checkbox'],
+      ul: ['contains-task-list'],
+      li: ['task-list-item'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto', 'tel', 'asset'],
+    allowedSchemesByTag: { img: ['http', 'https', 'data', 'asset'] },
+    allowProtocolRelative: false,
+  });
   math.forEach((rendered, index) => {
     const token = `HOUSEMDMATH${index}TOKEN`;
     html = html.split(`<p>${token}</p>`).join(rendered).split(token).join(rendered);

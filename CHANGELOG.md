@@ -4,6 +4,37 @@ All notable changes to HouseMD are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-10-24
+
+The workspace release: tabs, recovery, search, settings, and folder browsing.
+
+### Added
+
+- Tabbed documents with dirty indicators, close protection, middle-click close, and tab shortcuts.
+- Session recovery for tabs, unsaved drafts, active tab, and folder sidebar.
+- Optional autosave to disk after a short pause.
+- Recent-files menu.
+- Find and replace bar with match case, next/previous, replace one, and replace all.
+- Settings panel with light/dark/system themes, four accent palettes, and adjustable preview/editor font sizes.
+- Collapsible folder sidebar for browsing Markdown files.
+- Sanitized inline HTML support for README-style layouts, images, tables, and anchors.
+- HTTPS image support in the preview.
+- Recovery toast when unsaved tabs are restored.
+
+### Changed
+
+- Default theme now follows the system preference.
+- Shell, sidebar, tabs, find, and settings layouts rewritten around the larger type scale.
+- Added `src/model.ts`, `src/paths.ts`, `src/explorer.ts`, `src/findbar.ts`, and `src/settings-panel.ts` to keep the v2 surface maintainable.
+
+### Fixed
+
+- Multiple new documents can coexist as tabs.
+- Closing a tab no longer requires discarding unrelated documents.
+- Window close now reports every dirty document, not just one.
+- Folder and document scopes are extended before reading files and trees.
+- README HTML no longer appears as literal text and is stripped of unsafe tags and attributes.
+
 ## [1.0.0] - 2026-10-24
 
 The first public release.

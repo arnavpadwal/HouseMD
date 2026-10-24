@@ -22,18 +22,19 @@
   <img src="docs/screenshots/housemd-dark.png" alt="HouseMD split view in dark mode" width="100%" />
 </p>
 
-HouseMD is a small desktop Markdown editor with a calm interface and a serious renderer. It opens local files, previews them live, and keeps the tools that matter for technical writing close at hand: real syntax highlighting, KaTeX math, Mermaid diagrams, GitHub-style anchors, and relative images.
+HouseMD is a small desktop Markdown editor with a calm interface and a serious renderer. It opens local files, previews them live, and keeps the tools that matter for technical writing close at hand: real syntax highlighting, KaTeX math, Mermaid diagrams, GitHub-style anchors, sanitized HTML, and relative images.
 
 No account, no sync service, no telemetry. Your notes stay where you put them.
 
 ## Why HouseMD?
 
 - **Local by default.** Files are read and written directly through scoped Tauri commands.
+- **Tabs that remember.** Open several documents, jump between them, and restore the whole session after a crash.
 - **Built for technical notes.** Fenced code is highlighted with highlight.js; math and diagrams are first-class.
-- **A preview you can trust.** GitHub-style headings, anchors, tables, task lists, and relative images render correctly.
-- **A quiet interface.** Three layouts, a large readable type scale, light and dark themes, and no unnecessary chrome.
+- **A preview you can trust.** GitHub-style headings, anchors, tables, task lists, README HTML, and relative images render correctly.
+- **A quiet interface.** Three layouts, a large readable type scale, light/dark/system themes, accent colors, and adjustable type sizes.
 - **Desktop-native behavior.** Native open/save dialogs, drag-and-drop, file-association/CLI opening, and single-instance handoff.
-- **Safe editing.** Unsaved changes are protected on open, new, and close; file and asset access is scoped to the document.
+- **Safe editing.** Unsaved changes are protected, recovery drafts survive a crash, and optional autosave writes changes to disk.
 
 ## Screenshots
 
@@ -44,36 +45,47 @@ No account, no sync service, no telemetry. Your notes stay where you put them.
       <p align="center"><sub><b>Read mode</b> — a comfortable measure for long documents.</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/screenshots/housemd-code.png" alt="HouseMD showing syntax-highlighted TypeScript and shell code" />
-      <p align="center"><sub><b>Real syntax highlighting</b> — TypeScript, shell, JSON, Rust, and more.</sub></p>
+      <img src="docs/screenshots/housemd-sidebar.png" alt="HouseMD folder sidebar with a Markdown workspace" />
+      <p align="center"><sub><b>Folder sidebar</b> — browse a Markdown workspace without leaving the editor.</sub></p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/housemd-help.png" alt="HouseMD Markdown help overlay" />
-      <p align="center"><sub><b>Markdown guide</b> — search syntax and insert it at the caret.</sub></p>
+      <img src="docs/screenshots/housemd-find.png" alt="HouseMD find and replace bar" />
+      <p align="center"><sub><b>Find and replace</b> — match case, step through results, replace one or all.</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/screenshots/housemd-dark.png" alt="HouseMD split view with editor and live preview" />
-      <p align="center"><sub><b>Split view</b> — write on the left, see the result on the right.</sub></p>
+      <img src="docs/screenshots/housemd-settings.png" alt="HouseMD settings panel" />
+      <p align="center"><sub><b>Settings</b> — theme, accent, type sizes, autosave, and session restore.</sub></p>
     </td>
   </tr>
 </table>
+
+<p align="center">
+  <img src="docs/screenshots/housemd-code.png" alt="HouseMD showing syntax-highlighted TypeScript and shell code" width="100%" />
+</p>
+
+<p align="center"><sub><b>Real syntax highlighting</b> — TypeScript, shell, JSON, Rust, Python, YAML, HTML, CSS, SQL, and more.</sub></p>
 
 ## Features
 
 |                             |                                                                                                              |
 | :-------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| **Tabs and recents**        | Multiple documents, close protection, recent-file menu, and session restore.                                 |
 | **Read / Focus / Split**    | Three layouts with an adjustable split divider (mouse, keyboard, or double-click to reset).                  |
-| **Live preview**            | Markdown rendered as you type, with scroll preservation.                                                     |
+| **Live preview**            | Markdown rendered as you type, with per-tab scroll preservation.                                             |
 | **Syntax-highlighted code** | highlight.js grammars for TypeScript, JavaScript, shell, JSON, Rust, Python, YAML, HTML, CSS, SQL, and more. |
 | **KaTeX math**              | Inline `$…$`, display `$$…$$`, and fenced `math` blocks.                                                     |
-| **Mermaid diagrams**        | Flowcharts, sequence diagrams, gantt charts, and the rest of Mermaid — rendered at natural size.             |
+| **Mermaid diagrams**        | Flowcharts, sequence diagrams, gantt charts, and the rest of Mermaid at natural size.                        |
 | **GitHub-style anchors**    | Heading slugs and empty `<a id="…"></a>` targets work with table-of-contents links.                          |
-| **Local images**            | Relative image paths resolve against the open document's folder.                                             |
+| **Sanitized HTML**          | Common README markup, images, tables, and anchors render safely; scripts and event handlers are stripped.    |
+| **Local images**            | Relative image paths resolve against the open document's folder; HTTPS images are supported.                 |
+| **Folder sidebar**          | Open a folder and browse its Markdown files in a collapsible tree.                                           |
+| **Find and replace**        | `Ctrl+F` / `Ctrl+H`, match case, next/previous, replace one, or replace all.                                 |
+| **Session recovery**        | Tabs, folder, and unsaved recovery drafts are restored after a crash.                                        |
+| **Optional autosave**       | Write edits to disk after a short pause when enabled.                                                        |
+| **Appearance settings**     | Light / dark / system themes, four accent palettes, and adjustable preview/editor type sizes.                |
 | **Native file workflow**    | Open, save, save-as, drag-and-drop, CLI/desktop file opening, and single-instance reuse.                     |
-| **Safe editing**            | Dirty-state tracking and a close/open/new confirmation before discarding changes.                            |
-| **Themes**                  | Carefully tuned light and dark palettes, remembered between launches.                                        |
 | **Print / PDF**             | Print dialog with a clean print stylesheet for the rendered preview.                                         |
 
 ## Installation
@@ -85,13 +97,13 @@ Download the latest bundle from [Releases](https://github.com/arnavpadwal/HouseM
 **Debian / Ubuntu**
 
 ```sh
-sudo apt install ./HouseMD_1.0.0_amd64.deb
+sudo apt install ./HouseMD_2.0.0_amd64.deb
 ```
 
 **Fedora / RHEL**
 
 ```sh
-sudo dnf install ./HouseMD-1.0.0-1.x86_64.rpm
+sudo dnf install ./HouseMD-2.0.0-1.x86_64.rpm
 ```
 
 **Arch Linux / other distributions**
@@ -99,13 +111,13 @@ sudo dnf install ./HouseMD-1.0.0-1.x86_64.rpm
 Use the AppImage:
 
 ```sh
-chmod +x HouseMD_1.0.0_amd64.AppImage
-./HouseMD_1.0.0_amd64.AppImage
+chmod +x HouseMD_2.0.0_amd64.AppImage
+./HouseMD_2.0.0_amd64.AppImage
 ```
 
 For desktop-menu integration, use an AppImage manager such as Gear Lever, or build from source and install the binary and `.desktop` entry into `~/.local`.
 
-> v1.0.0 ships Linux bundles. macOS and Windows builds can be produced from source with Tauri; signed installers are on the roadmap.
+> v2.0.0 ships Linux bundles. macOS and Windows builds can be produced from source with Tauri; signed installers require platform signing credentials and are tracked on the roadmap.
 
 ### Build from source
 
@@ -131,25 +143,31 @@ pnpm tauri build
 
 ## Usage
 
-Open a document from the toolbar, drag a Markdown file onto the window, or pass one on the command line:
+Open a document from the toolbar, drag a Markdown file onto the window, use the folder sidebar, or pass a file on the command line:
 
 ```sh
 housemd notes.md
 ```
 
-A second launch with another file reuses the existing window.
+A second launch with another file reuses the existing window and opens a tab.
 
 ### Keyboard shortcuts
 
-| Action              | Shortcut               |
-| :------------------ | :--------------------- |
-| New document        | `Ctrl+N` / `⌘N`        |
-| Open                | `Ctrl+O` / `⌘O`        |
-| Save                | `Ctrl+S` / `⌘S`        |
-| Save as             | `Ctrl+Shift+S` / `⌘⇧S` |
-| Print / PDF         | `Ctrl+P` / `⌘P`        |
-| Markdown guide      | `Ctrl+/` / `⌘/`        |
-| Close guide or menu | `Esc`                  |
+| Action                     | Shortcut                      |
+| :------------------------- | :---------------------------- |
+| New tab                    | `Ctrl+N` / `⌘N`               |
+| Close tab                  | `Ctrl+W` / `⌘W`               |
+| Next / previous tab        | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
+| Open                       | `Ctrl+O` / `⌘O`               |
+| Save                       | `Ctrl+S` / `⌘S`               |
+| Save as                    | `Ctrl+Shift+S` / `⌘⇧S`        |
+| Find                       | `Ctrl+F` / `⌘F`               |
+| Replace                    | `Ctrl+H` / `⌘H`               |
+| Toggle folder sidebar      | `Ctrl+B` / `⌘B`               |
+| Settings                   | `Ctrl+,` / `⌘,`               |
+| Print / PDF                | `Ctrl+P` / `⌘P`               |
+| Markdown guide             | `Ctrl+/` / `⌘/`               |
+| Close guide, find, or menu | `Esc`                         |
 
 ### Markdown support
 
@@ -157,36 +175,45 @@ A second launch with another file reuses the existing window.
 - Fenced code with language-aware highlighting
 - Inline and display math with KaTeX
 - Mermaid diagrams in `mermaid` fences
-- Relative image paths and external links
+- Relative image paths, HTTPS images, and external links
 - GitHub-style heading IDs and explicit anchors
-- Raw HTML stays escaped by design; empty `<a id="…"></a>` anchors are the exception
+- Sanitized inline HTML for README-style layouts, images, and tables
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  UI["TypeScript UI<br/>markdown-it · KaTeX · Mermaid · highlight.js"]
+  UI["TypeScript UI<br/>tabs · editor · preview · sidebar"]
+  State["Session and settings<br/>localStorage recovery state"]
   Shell["Tauri 2 / Rust shell"]
   OS["Native dialogs<br/>scoped file access<br/>system browser"]
 
   UI <-->|IPC| Shell
+  UI <--> State
   Shell --> OS
 ```
 
-- **Frontend:** framework-free TypeScript, Vite, and a single sectioned stylesheet.
-- **Renderer:** `src/markdown.ts` — markdown-it, highlight.js, KaTeX, Mermaid, anchors, and heading IDs.
+- **Frontend:** framework-free TypeScript, Vite, and a sectioned stylesheet.
+- **Renderer:** `src/markdown.ts` — markdown-it, highlight.js, KaTeX, Mermaid, sanitized HTML, anchors, and heading IDs.
+- **State:** `src/model.ts` — tabs, settings, recents, and session persistence.
 - **Shell:** `src-tauri/src/lib.rs` — Tauri plugins, scoped asset/file access, CLI file opening, and single-instance handoff.
-- **Tests:** Node's test runner against the pure renderer.
+- **Tests:** Node's test runner against the pure renderer and path helpers.
 
 ```text
 src/
-  content.ts      sample document, icons, Markdown guide entries
-  main.ts         app shell, editor, file lifecycle, menus, shortcuts
-  markdown.ts     Markdown/KaTeX/Mermaid/highlight.js renderer
-  style.css       design tokens, layout, Markdown, themes, print
-  vendor.d.ts     ambient declarations for untyped dependencies
+  content.ts       sample document, icons, Markdown guide entries
+  explorer.ts      folder tree state and rendering
+  findbar.ts       find/replace controller
+  main.ts          app shell, tabs, file lifecycle, menus, shortcuts
+  markdown.ts      Markdown/KaTeX/Mermaid/highlight.js/sanitizer renderer
+  model.ts         tabs, settings, recents, session storage
+  paths.ts         cross-platform path helpers
+  settings-panel.ts appearance and file behavior dialog
+  style.css        tokens, layout, Markdown, tabs, sidebar, overlays, print
+  vendor.d.ts      ambient declarations for untyped dependencies
 tests/
   markdown.test.ts
+  paths.test.ts
 src-tauri/
   src/lib.rs      Tauri setup and native commands
   capabilities/   permission scopes
@@ -198,7 +225,7 @@ src-tauri/
 ```sh
 pnpm install
 pnpm tauri dev      # desktop app with Vite
-pnpm check          # typecheck + tests + Prettier check
+pnpm check          # typecheck + 16 tests + Prettier check
 pnpm build          # frontend production build
 pnpm tauri build    # desktop bundles
 ```
@@ -224,12 +251,12 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 ## Roadmap
 
 - [x] v1.0.0 — renderer, themes, file workflow, single instance
-- [ ] Tabs and recent files
-- [ ] Autosave and crash recovery
-- [ ] Find and replace
-- [ ] User themes and font settings
-- [ ] Signed macOS and Windows installers
-- [ ] Optional workspace/folder view
+- [x] v2.0.0 — tabs, recent files, session recovery, autosave, find/replace, settings, folder sidebar
+- [ ] Signed and notarized macOS installers
+- [ ] Signed Windows installers
+- [ ] File operations in the sidebar (rename, delete, new file)
+- [ ] Split-pane scroll synchronization
+- [ ] User-provided custom themes
 
 Have an idea? [Open an issue](https://github.com/arnavpadwal/HouseMD/issues).
 
