@@ -21,6 +21,7 @@ The editor release: CodeMirror, line numbers, multi-cursor search, and LaTeX.
 - LaTeX-specific Markdown guide entries.
 - LaTeX files in the open dialog, CLI launcher, recent files, and folder sidebar.
 - Linux distribution is now Flatpak-only; the Flatpak bundle is the single official Linux build.
+- App identity changed to `com.ortiqo.housemd`.
 
 ### Changed
 

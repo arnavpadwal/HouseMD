@@ -1,4 +1,4 @@
-app-id: com.housemd.markdown
+app-id: com.ortiqo.housemd
 runtime: org.gnome.Platform
 runtime-version: '51'
 sdk: org.gnome.Sdk
@@ -23,13 +23,13 @@ modules:
       - install -Dm755 pdflatex /app/bin/pdflatex
       - install -Dm755 xelatex /app/bin/xelatex
       - install -Dm755 lualatex /app/bin/lualatex
-      - install -Dm644 com.housemd.markdown.desktop /app/share/applications/com.housemd.markdown.desktop
-      - install -Dm644 com.housemd.markdown.metainfo.xml /app/share/metainfo/com.housemd.markdown.metainfo.xml
-      - install -Dm644 LICENSE /app/share/licenses/com.housemd.markdown/LICENSE
-      - install -Dm644 icon-32.png /app/share/icons/hicolor/32x32/apps/com.housemd.markdown.png
-      - install -Dm644 icon-128.png /app/share/icons/hicolor/128x128/apps/com.housemd.markdown.png
-      - install -Dm644 icon-256.png /app/share/icons/hicolor/256x256/apps/com.housemd.markdown.png
-      - install -Dm644 icon-512.png /app/share/icons/hicolor/512x512/apps/com.housemd.markdown.png
+      - install -Dm644 com.ortiqo.housemd.desktop /app/share/applications/com.ortiqo.housemd.desktop
+      - install -Dm644 com.ortiqo.housemd.metainfo.xml /app/share/metainfo/com.ortiqo.housemd.metainfo.xml
+      - install -Dm644 LICENSE /app/share/licenses/com.ortiqo.housemd/LICENSE
+      - install -Dm644 icon-32.png /app/share/icons/hicolor/32x32/apps/com.ortiqo.housemd.png
+      - install -Dm644 icon-128.png /app/share/icons/hicolor/128x128/apps/com.ortiqo.housemd.png
+      - install -Dm644 icon-256.png /app/share/icons/hicolor/256x256/apps/com.ortiqo.housemd.png
+      - install -Dm644 icon-512.png /app/share/icons/hicolor/512x512/apps/com.ortiqo.housemd.png
     sources:
       - type: file
         path: ../src-tauri/target/release/housemd
@@ -40,9 +40,9 @@ modules:
       - type: file
         path: lualatex
       - type: file
-        path: com.housemd.markdown.desktop
+        path: com.ortiqo.housemd.desktop
       - type: file
-        path: com.housemd.markdown.metainfo.xml
+        path: com.ortiqo.housemd.metainfo.xml
       - type: file
         path: ../LICENSE
       - type: file

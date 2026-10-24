@@ -16,7 +16,7 @@ The script creates `HouseMD-2.5.0-x86_64.flatpak` in the repository root. It use
 metadata, and exports a stable-branch bundle.
 
 The equivalent `flatpak-builder` manifest is
-[`com.housemd.markdown.yml`](com.housemd.markdown.yml); it expects the binary at
+[`com.ortiqo.housemd.yml`](com.ortiqo.housemd.yml); it expects the binary at
 `src-tauri/target/release/housemd`.
 
 ## Runtime
@@ -38,6 +38,6 @@ flatpak install --user org.gnome.Platform//51 org.gnome.Sdk//51
 ## Test
 
 ```sh
-flatpak run com.housemd.markdown ~/notes.md
-flatpak run com.housemd.markdown ~/paper.tex
+flatpak run com.ortiqo.housemd ~/notes.md
+flatpak run com.ortiqo.housemd ~/paper.tex
 ```

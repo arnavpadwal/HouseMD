@@ -96,7 +96,7 @@ Download the latest bundle from [Releases](https://github.com/arnavpadwal/HouseM
 ```sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 flatpak install --user ./HouseMD-2.5.0-x86_64.flatpak
-flatpak run com.housemd.markdown
+flatpak run com.ortiqo.housemd
 ```
 
 HouseMD appears in the desktop launcher after installation. The bundle uses the GNOME 51 runtime, which includes WebKitGTK 4.1.
@@ -146,9 +146,9 @@ bash flatpak/build-flatpak.sh
 Open a document from the toolbar, drag a file onto the window, use the folder sidebar, or pass a file on the command line:
 
 ```sh
-flatpak run com.housemd.markdown notes.md
-flatpak run com.housemd.markdown paper.tex
-flatpak run com.housemd.markdown references.bib
+flatpak run com.ortiqo.housemd notes.md
+flatpak run com.ortiqo.housemd paper.tex
+flatpak run com.ortiqo.housemd references.bib
 ```
 
 A second launch with another file reuses the existing window and opens a tab.
@@ -246,7 +246,7 @@ src-tauri/
   capabilities/   permission scopes
   tauri.conf.json window, CSP, asset protocol, bundles
 flatpak/
-  com.housemd.markdown.yml  Flatpak manifest
+  com.ortiqo.housemd.yml  Flatpak manifest
   build-flatpak.sh          local Flatpak bundle builder
   wrappers                   host TeX wrappers
 ```
