@@ -10,25 +10,30 @@ access, and system-browser integration.
 
 - TypeScript 7, Vite 8, plain DOM APIs
 - Tauri 2 (Rust 2021) with dialog, fs, and opener plugins
-- markdown-it + markdown-it-task-lists, KaTeX, Mermaid
-- pnpm; font packages from Fontsource
+- markdown-it + markdown-it-task-lists, KaTeX, Mermaid, highlight.js
+- pnpm; font packages from Fontsource; Prettier for formatting
 
 ## Commands
 
 ```sh
 pnpm install        # install frontend dependencies
 pnpm tauri dev      # run the desktop app with Vite
-pnpm check          # tsc --noEmit + node --test
+pnpm check          # tsc --noEmit + node --test + Prettier check
 pnpm test           # renderer tests only (Node type stripping)
+pnpm format         # format the repo with Prettier
 pnpm build          # typecheck + production frontend in dist/
 pnpm tauri build    # desktop binary and bundles in src-tauri/target/release
+cargo fmt --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 ```
 
-There is no lint step. TypeScript is strict and `noEmit`; Vite bundles from `index.html`.
+TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo fmt` / `clippy`. Vite bundles from `index.html`.
 
 ## Architecture
 
 - `index.html` mounts `#app`; `src/main.ts` renders the entire shell and owns app state.
+- `src/content.ts` owns the sample document, SVG icon strings, and Markdown guide entries.
+- `src/style.css` is a sectioned stylesheet (tokens, shell, workspace, Markdown, overlays, print). Never reintroduce global `svg { width }` sizing; it breaks Mermaid and KaTeX.
 - `src/markdown.ts` is the pure renderer: it extracts math before Markdown, protects code
   spans/fences from the math pass, converts empty GitHub-style anchors into invisible
   targets, adds heading ids for TOC links, highlights fenced code with highlight.js, and
@@ -68,7 +73,12 @@ There is no lint step. TypeScript is strict and `noEmit`; Vite bundles from `ind
   before reading dropped files or showing sibling images.
 - All frontend file access must stay inside the scopes declared in capabilities and
   the asset protocol config; do not widen them without a reason.
-- Window close handling uses `onCloseRequested`; the handler awaits `ask()` and calls
-  `preventDefault()` when the user keeps editing.
+- Window close handling uses `onCloseRequested` and an in-app confirmation overlay, never a
+  native dialog (native dialogs can deadlock while a close request is pending).
 - The Tauri window title is set via `core:window:allow-set-title`; there is no router.
-- `dist/` and `src-tauri/target/` are build outputs and should not be edited.
+- `dist/`, `src-tauri/target/`, and `src-tauri/gen/` are ignored build outputs; never edit or
+  commit them.
+- CI lives in `.github/workflows/ci.yml` and runs frontend checks, Rust fmt/clippy, and a
+  Tauri build on `main` and `develop`.
+- Version 1.0.0 is the public baseline. Keep `main` release-ready and integrate work on
+  `develop`.
