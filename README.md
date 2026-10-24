@@ -113,7 +113,7 @@ xelatex --version
 lualatex --version
 ```
 
-Install TeX Live (or MacTeX / MiKTeX) to enable **Compile PDF**. The app runs the compiler in the document's folder with shell escape disabled and opens the generated PDF with your system PDF viewer.
+Install TeX Live to enable **Compile PDF**. The app runs the compiler in the document's folder with shell escape disabled and opens the generated PDF with your system PDF viewer.
 
 In the Flatpak build, the compiler wrappers call your **host** TeX installation through `flatpak-spawn`. If TeX is not installed on the host, the LaTeX panel reports that no compiler was found.
 
@@ -146,9 +146,9 @@ bash flatpak/build-flatpak.sh
 Open a document from the toolbar, drag a file onto the window, use the folder sidebar, or pass a file on the command line:
 
 ```sh
-housemd notes.md
-housemd paper.tex
-housemd references.bib
+flatpak run com.housemd.markdown notes.md
+flatpak run com.housemd.markdown paper.tex
+flatpak run com.housemd.markdown references.bib
 ```
 
 A second launch with another file reuses the existing window and opens a tab.
