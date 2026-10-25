@@ -1,0 +1,3 @@
+#!/bin/sh
+# Host-side launcher for the HouseMD Flatpak.
+exec flatpak run --user com.ortiqo.housemd "$@"

@@ -101,6 +101,16 @@ flatpak run com.ortiqo.housemd
 
 HouseMD appears in the desktop launcher after installation. The bundle uses the GNOME 51 runtime, which includes WebKitGTK 4.1.
 
+For a terminal command, install the small host wrapper:
+
+```sh
+install -Dm755 scripts/housemd ~/.local/bin/housemd
+housemd notes.md
+housemd paper.tex
+```
+
+Without the wrapper, use `flatpak run com.ortiqo.housemd notes.md`.
+
 **Why Flatpak?** One installable file, a consistent runtime, app-menu integration, and a sandboxed process. The bundle has access to your home directory for normal document editing and uses your host TeX Live installation for LaTeX compilation.
 
 ### LaTeX requirements
