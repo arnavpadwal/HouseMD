@@ -1,6 +1,6 @@
 [package]
 name = "housemd"
-version = "2.5.0"
+version = "2.6.0"
 description = "A quiet, local-first Markdown editor built with Tauri"
 license = "MIT"
 repository = "https://github.com/arnavpadwal/HouseMD"

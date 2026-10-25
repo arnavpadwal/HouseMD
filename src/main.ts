@@ -5,7 +5,7 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ask, message, open, save } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readFile, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath as openSystemPath, openUrl } from '@tauri-apps/plugin-opener';
 import { escapeHtml, renderMarkdown } from './markdown';
 import { helpItems, icons, latexHelpItems, sample, type HelpItem } from './content';
@@ -28,6 +28,7 @@ import { baseName, dirName, fileKind, isLatexDocument, isSupportedFile, normaliz
 import { createEditor, type EditorController } from './editor';
 import { createExplorer } from './explorer';
 import { openSettingsPanel } from './settings-panel';
+import { renderPdfPage } from './pdf-preview';
 
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 const appWindow = inTauri ? getCurrentWindow() : null;
@@ -67,10 +68,15 @@ interface LatexBuildState {
   log: string;
   pdf: string;
   error: string;
+  page: number;
+  pages: number;
+  zoom: number;
+  engine: string;
 }
 
 let editor: EditorController | null = null;
 let latexCompiler: string | null = null;
+let latexEngines: string[] = [];
 const latexBuilds = new Map<string, LatexBuildState>();
 
 const explorer = createExplorer({
@@ -185,6 +191,7 @@ function refreshPreview(preserveScroll = true) {
     renderPlainPreview(preview);
     return;
   }
+  preview.classList.remove('latex-mode');
   const scroll = preserveScroll ? preview.scrollTop : activeTab.previewScroll;
   preview.innerHTML = renderMarkdown(activeTab.content);
   resolvePreviewAssets(preview);
@@ -202,13 +209,23 @@ function schedulePreview() {
 }
 
 function renderPlainPreview(preview: HTMLElement) {
+  preview.classList.remove('latex-mode');
   preview.innerHTML = `<div class="plain-pane"><div class="plain-head">${escapeHtml(languageLabel(activeTab.path))} source</div><pre>${escapeHtml(activeTab.content)}</pre></div>`;
 }
 
 function latexBuildState(): LatexBuildState {
   let state = latexBuilds.get(activeTab.id);
   if (!state) {
-    state = { building: false, log: '', pdf: '', error: '' };
+    state = {
+      building: false,
+      log: '',
+      pdf: '',
+      error: '',
+      page: 1,
+      pages: 0,
+      zoom: 1.35,
+      engine: latexEngines[0] ?? 'pdflatex',
+    };
     latexBuilds.set(activeTab.id, state);
   }
   return state;
@@ -216,11 +233,45 @@ function latexBuildState(): LatexBuildState {
 
 function renderLatexPreview(preview: HTMLElement) {
   const state = latexBuildState();
+  const engines = latexEngines.length ? latexEngines : [];
   const compiler = latexCompiler;
+  preview.classList.add('latex-mode');
+  const engineOptions = engines
+    .map(
+      (engine) =>
+        `<option value="${escapeHtml(engine)}"${state.engine === engine ? ' selected' : ''}>${escapeHtml(engine)}</option>`,
+    )
+    .join('');
+  const toolbar = `<div class="latex-toolbar"><select data-latex-engine aria-label="LaTeX engine" ${engines.length ? '' : 'disabled'}>${engineOptions || '<option>No compiler</option>'}</select><button type="button" class="latex-build" data-action="compile-latex" ${!compiler || state.building ? 'disabled' : ''}>${state.building ? 'Compiling…' : 'Recompile'}</button>${state.pdf ? `<span class="latex-toolbar-sep"></span><button type="button" data-latex-page="prev" aria-label="Previous page">‹</button><span class="latex-page-count">${state.page} / ${state.pages || '–'}</span><button type="button" data-latex-page="next" aria-label="Next page">›</button><span class="latex-toolbar-sep"></span><button type="button" data-latex-zoom="out" aria-label="Zoom out">−</button><span class="latex-zoom">${Math.round(state.zoom * 100)}%</span><button type="button" data-latex-zoom="in" aria-label="Zoom in">+</button><span class="latex-toolbar-sep"></span><button type="button" data-action="open-latex-pdf">Open PDF</button>` : ''}</div>`;
   const hint = compiler
-    ? `Compile with <code>${escapeHtml(compiler)}</code> and open the PDF in your system viewer.`
+    ? `Compiled with TeX Live; the preview uses the document's actual fonts, including Computer Modern by default.`
     : 'No LaTeX compiler found. Install TeX Live (pdflatex, xelatex, or lualatex) and reopen this document.';
-  preview.innerHTML = `<div class="latex-pane"><div class="latex-card"><div class="latex-kicker">LaTeX document</div><h2>${escapeHtml(docName())}</h2><p>${hint}</p><div class="latex-actions"><button type="button" class="latex-build" data-action="compile-latex" ${!compiler || state.building ? 'disabled' : ''}>${state.building ? 'Compiling…' : 'Compile PDF'}</button>${state.pdf ? `<button type="button" data-action="open-latex-pdf">Open PDF</button><span class="latex-path" title="${escapeHtml(state.pdf)}">${escapeHtml(state.pdf)}</span>` : ''}</div>${state.error ? `<p class="latex-error">${escapeHtml(state.error)}</p>` : ''}${state.log ? `<details class="latex-details"${state.error ? ' open' : ''}><summary>Build log</summary><pre>${escapeHtml(state.log)}</pre></details>` : ''}</div></div>`;
+  const body = state.pdf
+    ? `<div class="latex-doc"><canvas id="latex-canvas"></canvas></div>`
+    : `<div class="latex-empty"><div class="latex-card"><div class="latex-kicker">LaTeX document</div><h2>${escapeHtml(docName())}</h2><p>${hint}</p><div class="latex-actions"><button type="button" class="latex-build" data-action="compile-latex" ${!compiler || state.building ? 'disabled' : ''}>${state.building ? 'Compiling…' : 'Compile PDF'}</button>${state.pdf ? '<button type="button" data-action="open-latex-pdf">Open PDF</button>' : ''}</div></div></div>`;
+  preview.innerHTML = `<div class="latex-pane">${toolbar}${body}${state.error ? `<p class="latex-error">${escapeHtml(state.error)}</p>` : ''}${state.log ? `<details class="latex-details"${state.error ? ' open' : ''}><summary>Build log</summary><pre>${escapeHtml(state.log)}</pre></details>` : ''}</div>`;
+  if (state.pdf) void paintLatexPdf(preview, state);
+}
+
+async function paintLatexPdf(preview: HTMLElement, state: LatexBuildState) {
+  const canvas = preview.querySelector<HTMLCanvasElement>('#latex-canvas');
+  if (!canvas || !state.pdf) return;
+  try {
+    await allowDocumentDir(state.pdf);
+    const data = await readFile(state.pdf);
+    const result = await renderPdfPage(canvas, data, state.page, state.zoom);
+    state.pages = result.pages;
+    if (state.page > result.pages) state.page = result.pages;
+    const count = preview.querySelector<HTMLElement>('.latex-page-count');
+    if (count) count.textContent = `${state.page} / ${result.pages}`;
+  } catch (error) {
+    state.error = error instanceof Error ? error.message : String(error);
+    console.error('PDF preview failed', error);
+    const pane = preview.querySelector<HTMLElement>('.latex-pane');
+    const errorElement = preview.querySelector<HTMLElement>('.latex-error');
+    if (errorElement) errorElement.textContent = state.error;
+    else pane?.insertAdjacentHTML('beforeend', `<p class="latex-error">${escapeHtml(state.error)}</p>`);
+  }
 }
 
 async function openLatexPdf() {
@@ -243,16 +294,13 @@ async function compileLatex() {
   state.log = 'Compiling…';
   if (tabId === activeTab.id) refreshPreview();
   try {
-    const result = await invoke<LatexBuildResult>('compile_latex', { path });
+    const result = await invoke<LatexBuildResult>('compile_latex', { path, engine: state.engine });
     state.pdf = result.pdf;
     state.log = result.log;
     state.error = '';
-    showToast(`LaTeX compiled with ${result.compiler}. Opening PDF…`);
-    try {
-      await openSystemPath(result.pdf);
-    } catch {
-      showToast('PDF compiled. Use Open PDF in the LaTeX panel.');
-    }
+    state.page = 1;
+    state.pages = 0;
+    showToast(`LaTeX compiled with ${result.compiler}.`);
   } catch (error) {
     state.error = error instanceof Error ? error.message : String(error);
     state.log = state.error;
@@ -762,6 +810,10 @@ function bind() {
     const preview = document.querySelector<HTMLElement>('#preview');
     if (preview) activeTab.previewScroll = preview.scrollTop;
   });
+  document.querySelector('#preview')?.addEventListener('change', (event) => {
+    const select = (event.target as HTMLElement).closest<HTMLSelectElement>('[data-latex-engine]');
+    if (select) latexBuildState().engine = select.value;
+  });
 
   explorer.bind(document.querySelector<HTMLElement>('#file-tree'));
 }
@@ -863,6 +915,23 @@ async function handlePreviewClick(event: Event) {
   if (action === 'open-latex-pdf') {
     event.preventDefault();
     await openLatexPdf();
+    return;
+  }
+  const pageAction = (event.target as HTMLElement).closest<HTMLElement>('[data-latex-page]')?.dataset.latexPage;
+  if (pageAction) {
+    event.preventDefault();
+    const state = latexBuildState();
+    const direction = pageAction === 'next' ? 1 : -1;
+    state.page = Math.max(1, Math.min(state.pages || 1, state.page + direction));
+    refreshPreview();
+    return;
+  }
+  const zoomAction = (event.target as HTMLElement).closest<HTMLElement>('[data-latex-zoom]')?.dataset.latexZoom;
+  if (zoomAction) {
+    event.preventDefault();
+    const state = latexBuildState();
+    state.zoom = Math.max(0.6, Math.min(3, state.zoom + (zoomAction === 'in' ? 0.15 : -0.15)));
+    refreshPreview();
     return;
   }
   const anchor = (event.target as HTMLElement).closest('a');
@@ -1064,6 +1133,7 @@ async function saveFile(choosePath: boolean) {
   renderTabs();
   renderSidebar();
   persistSession();
+  if (isLatexDocument(path)) void compileLatex();
   return true;
 }
 
@@ -1297,8 +1367,10 @@ async function initialize() {
   applyAppearance();
   if (inTauri) {
     try {
-      latexCompiler = await invoke<string | null>('latex_compiler');
+      latexEngines = await invoke<string[]>('latex_engines');
+      latexCompiler = latexEngines[0] ?? null;
     } catch {
+      latexEngines = [];
       latexCompiler = null;
     }
   }

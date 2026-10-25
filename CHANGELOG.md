@@ -4,6 +4,29 @@ All notable changes to HouseMD are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] - 2026-10-25
+
+The LaTeX preview release.
+
+### Added
+
+- In-app PDF preview for LaTeX using PDF.js, with page navigation and zoom.
+- Multi-pass LaTeX compilation, BibTeX/Biber auxiliary support, and engine selection (pdfLaTeX, XeLaTeX, LuaLaTeX).
+- Actual TeX output in the preview, including Computer Modern and document-selected fonts.
+- Automatic LaTeX recompilation when saving a `.tex` document.
+- Host TeX wrappers for BibTeX, Biber, and MakeIndex in the Flatpak.
+- `latex_engines` command for available engine discovery.
+
+### Changed
+
+- LaTeX output now lives under the app cache and is read by the in-app preview instead of being opened externally.
+- The LaTeX panel is a full PDF workspace with compile, page, zoom, engine, log, and external-open controls.
+
+### Fixed
+
+- LaTeX preview no longer depends on an external PDF viewer.
+- Flatpak LaTeX compilation now supports bibliography/index passes through host TeX.
+
 ## [2.5.0] - 2026-10-25
 
 The editor release: CodeMirror, line numbers, multi-cursor search, and LaTeX.

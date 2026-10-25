@@ -53,8 +53,8 @@ Write Markdown on the left and see the rendered result on the right. Open a `.te
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/housemd-latex.png" alt="HouseMD editing a LaTeX document with a compile panel" />
-      <p align="center"><sub><b>LaTeX workspace</b> — syntax highlighting, line numbers, and one-click PDF compilation.</sub></p>
+      <img src="docs/screenshots/housemd-latex.png" alt="HouseMD editing a LaTeX document with an in-app Computer Modern PDF preview" />
+      <p align="center"><sub><b>LaTeX preview</b> — real TeX output, Computer Modern, page navigation, zoom, and build logs.</sub></p>
     </td>
     <td width="50%">
       <img src="docs/screenshots/housemd-settings.png" alt="HouseMD settings panel" />
@@ -95,7 +95,7 @@ Download the latest bundle from [Releases](https://github.com/arnavpadwal/HouseM
 
 ```sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-flatpak install --user ./HouseMD-2.5.0-x86_64.flatpak
+flatpak install --user ./HouseMD-2.6.0-x86_64.flatpak
 flatpak run com.ortiqo.housemd
 ```
 
@@ -123,9 +123,13 @@ xelatex --version
 lualatex --version
 ```
 
-Install TeX Live to enable **Compile PDF**. The app runs the compiler in the document's folder with shell escape disabled and opens the generated PDF with your system PDF viewer.
+Install TeX Live to enable **Compile PDF**. The app runs the compiler in the document's folder with shell escape disabled and previews the generated PDF in-app. Use **Open PDF** if you also want the system viewer.
+
+The PDF is rendered **inside the app** with PDF.js. The preview is the actual TeX output, so the default font is LaTeX's Computer Modern and document-selected fonts appear exactly as TeX produces them.
 
 In the Flatpak build, the compiler wrappers call your **host** TeX installation through `flatpak-spawn`. If TeX is not installed on the host, the LaTeX panel reports that no compiler was found.
+
+> Exact package versions and fonts depend on the TeX Live installation on your machine. Overleaf uses its own TeX Live image, so output is equivalent in behavior and default typography, not guaranteed byte-identical.
 
 ### Build from source
 
@@ -211,7 +215,9 @@ A second launch with another file reuses the existing window and opens a tab.
 - Syntax highlighting and folding through CodeMirror's LaTeX mode
 - Line numbers, search/replace, and multi-cursor editing
 - Compile with `pdflatex`, `xelatex`, or `lualatex`
-- Build log in the preview panel; generated PDF opened in the system viewer
+- In-app PDF preview with page navigation and zoom
+- Multi-pass builds with BibTeX/Biber and MakeIndex support
+- Build log in the preview panel; generated PDF can also be opened externally
 - Compiler runs with `-no-shell-escape` for safer local builds
 
 ## Architecture
@@ -294,9 +300,8 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 
 - [x] v1.0.0 — renderer, themes, file workflow, single instance
 - [x] v2.0.0 — tabs, recovery, autosave, find/replace, settings, folder sidebar
-- [x] v2.5.0 — CodeMirror editor, line numbers, multi-cursor/change-all, LaTeX editing and compilation
-- [x] v2.5.0 Flatpak bundle with host TeX support
-- [ ] LaTeX project/bibliography compilation (`bibtex` / `biber`)
+- [x] v2.5.0 — CodeMirror editor, line numbers, multi-cursor/change-all, LaTeX editing, Flatpak host TeX
+- [x] v2.6.0 — in-app PDF preview, real TeX/Computer Modern, multi-pass builds, BibTeX/Biber, engine selection
 - [ ] File operations in the sidebar (rename, delete, new file)
 - [ ] Split-pane scroll synchronization
 
@@ -314,4 +319,4 @@ Bundled fonts are licensed under the SIL Open Font License; see [`public/license
 
 ## Acknowledgements
 
-Built with [Tauri](https://tauri.app), [CodeMirror](https://codemirror.net), [markdown-it](https://github.com/markdown-it/markdown-it), [highlight.js](https://highlightjs.org), [KaTeX](https://katex.org), and [Mermaid](https://mermaid.js.org). Type set in [Source Sans 3](https://adobe-fonts.github.io/source-sans/) and [Source Code Pro](https://adobe-fonts.github.io/source-code-pro/).
+Built with [Tauri](https://tauri.app), [CodeMirror](https://codemirror.net), [PDF.js](https://mozilla.github.io/pdf.js/), [markdown-it](https://github.com/markdown-it/markdown-it), [highlight.js](https://highlightjs.org), [KaTeX](https://katex.org), and [Mermaid](https://mermaid.js.org). Type set in [Source Sans 3](https://adobe-fonts.github.io/source-sans/) and [Source Code Pro](https://adobe-fonts.github.io/source-code-pro/).

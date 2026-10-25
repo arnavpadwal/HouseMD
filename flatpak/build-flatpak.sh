@@ -17,7 +17,7 @@ trap 'rm -rf "$build_dir" "$repo"' EXIT
 flatpak build-init "$build_dir" com.ortiqo.housemd org.gnome.Sdk//51 org.gnome.Platform//51
 
 install -Dm755 "$binary" "$build_dir/files/bin/housemd"
-for compiler in pdflatex xelatex lualatex; do
+for compiler in pdflatex xelatex lualatex bibtex biber makeindex; do
   install -Dm755 "flatpak/$compiler" "$build_dir/files/bin/$compiler"
 done
 install -Dm644 flatpak/com.ortiqo.housemd.desktop "$build_dir/files/share/applications/com.ortiqo.housemd.desktop"
@@ -30,7 +30,7 @@ install -Dm644 flatpak/icon-512.png "$build_dir/files/share/icons/hicolor/512x51
 
 flatpak build-finish "$build_dir" \
   --command=housemd \
-  --metadata=Application=version=2.5.0 \
+  --metadata=Application=version=2.6.0 \
   --share=ipc \
   --share=network \
   --socket=wayland \
@@ -42,5 +42,5 @@ flatpak build-finish "$build_dir" \
   --talk-name=org.freedesktop.Flatpak
 
 flatpak build-export "$repo" "$build_dir" stable
-flatpak build-bundle "$repo" "HouseMD-2.5.0-x86_64.flatpak" com.ortiqo.housemd stable
-echo "Created HouseMD-2.5.0-x86_64.flatpak"
+flatpak build-bundle "$repo" "HouseMD-2.6.0-x86_64.flatpak" com.ortiqo.housemd stable
+echo "Created HouseMD-2.6.0-x86_64.flatpak"

@@ -50,16 +50,35 @@ fn allow_document_dir(app: tauri::AppHandle, path: String) -> Result<(), String>
     Ok(())
 }
 
-fn latex_compiler_name() -> Option<&'static str> {
+fn latex_engine_names() -> Vec<&'static str> {
     ["pdflatex", "xelatex", "lualatex"]
         .into_iter()
-        .find(|candidate| {
+        .filter(|candidate| {
             Command::new(candidate)
                 .arg("--version")
                 .output()
                 .map(|output| output.status.success())
                 .unwrap_or(false)
         })
+        .collect()
+}
+
+fn tool_available(tool: &str) -> bool {
+    Command::new(tool)
+        .arg("--version")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
+fn cache_dir() -> PathBuf {
+    if let Some(path) = std::env::var_os("XDG_CACHE_HOME") {
+        return PathBuf::from(path);
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        return PathBuf::from(home).join(".cache");
+    }
+    std::env::temp_dir()
 }
 
 fn tail(text: &str, limit: usize) -> String {
@@ -75,11 +94,44 @@ struct LatexBuild {
     compiler: String,
 }
 
-/// Compile a `.tex`/`.latex` document into a temporary PDF. The compiler runs
-/// in the document's folder so relative includes and images resolve, with
-/// shell escape disabled. The PDF is returned for opening in the system viewer.
+fn run_tool(
+    program: &str,
+    arguments: &[String],
+    directory: &std::path::Path,
+    environment: &[(&str, String)],
+    log: &mut String,
+    label: &str,
+) -> Result<(), String> {
+    let output = Command::new(program)
+        .current_dir(directory)
+        .envs(
+            environment
+                .iter()
+                .map(|(key, value)| (*key, value.as_str())),
+        )
+        .args(arguments)
+        .output()
+        .map_err(|error| format!("Could not run {program}: {error}"))?;
+    log.push_str(&format!("--- {label} ---\n"));
+    log.push_str(&String::from_utf8_lossy(&output.stdout));
+    log.push_str(&String::from_utf8_lossy(&output.stderr));
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "{program} exited with status {}.\n\n{}",
+            output.status,
+            tail(log, 6000)
+        ))
+    }
+}
+
+/// Compile a LaTeX document into an in-app preview PDF. The compiler runs in
+/// the document folder so relative includes, images and bibliography resolve;
+/// shell escape is disabled. Output goes to the app cache under $HOME so the
+/// PDF can be read by the preview and survives long enough to be opened.
 #[tauri::command]
-fn compile_latex(path: String) -> Result<LatexBuild, String> {
+fn compile_latex(path: String, engine: Option<String>) -> Result<LatexBuild, String> {
     let source = PathBuf::from(&path);
     let extension = source
         .extension()
@@ -92,10 +144,16 @@ fn compile_latex(path: String) -> Result<LatexBuild, String> {
     if !source.is_file() {
         return Err("The LaTeX document could not be found.".to_string());
     }
-    let compiler = latex_compiler_name().ok_or_else(|| {
-        "No LaTeX compiler found. Install TeX Live (pdflatex, xelatex, or lualatex) and try again."
-            .to_string()
-    })?;
+    let engines = latex_engine_names();
+    if engines.is_empty() {
+        return Err(
+            "No LaTeX compiler found. Install TeX Live (pdflatex, xelatex, or lualatex) and try again."
+                .to_string(),
+        );
+    }
+    let compiler = engine
+        .filter(|candidate| engines.contains(&candidate.as_str()))
+        .unwrap_or_else(|| engines[0].to_string());
     let parent = source
         .parent()
         .ok_or_else(|| "Could not resolve the document folder.".to_string())?;
@@ -110,35 +168,85 @@ fn compile_latex(path: String) -> Result<LatexBuild, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis())
         .unwrap_or(0);
-    let output_dir = std::env::temp_dir()
-        .join("housemd-latex")
+    let output_dir = cache_dir()
+        .join("housemd")
+        .join("latex")
         .join(format!("{}-{stamp}-{stem}", std::process::id()));
     std::fs::create_dir_all(&output_dir)
         .map_err(|error| format!("Could not create the LaTeX output folder: {error}"))?;
 
+    let engine_args = || {
+        vec![
+            "-interaction=nonstopmode".to_string(),
+            "-halt-on-error".to_string(),
+            "-no-shell-escape".to_string(),
+            "-output-directory".to_string(),
+            output_dir.to_string_lossy().into_owned(),
+            file_name.to_string_lossy().into_owned(),
+        ]
+    };
     let mut log = String::new();
-    for pass in 1..=2 {
-        let output = Command::new(compiler)
-            .current_dir(parent)
-            .arg("-interaction=nonstopmode")
-            .arg("-halt-on-error")
-            .arg("-no-shell-escape")
-            .arg("-output-directory")
-            .arg(&output_dir)
-            .arg(file_name)
-            .output()
-            .map_err(|error| format!("Could not run {compiler}: {error}"))?;
-        log.push_str(&format!("--- pass {pass} ---\n"));
-        log.push_str(&String::from_utf8_lossy(&output.stdout));
-        log.push_str(&String::from_utf8_lossy(&output.stderr));
-        if !output.status.success() {
-            return Err(format!(
-                "{compiler} exited with status {}.\n\n{}",
-                output.status,
-                tail(&log, 6000)
-            ));
+
+    run_tool(&compiler, &engine_args(), parent, &[], &mut log, "pass 1")?;
+
+    // Bibliography and index passes. BibTeX/Biber only run when the first pass
+    // produced the corresponding auxiliary files.
+    let aux = output_dir.join(format!("{stem}.aux"));
+    let bcf = output_dir.join(format!("{stem}.bcf"));
+    let idx = output_dir.join(format!("{stem}.idx"));
+    let bib_paths = format!(
+        "{}{}",
+        parent.display(),
+        if cfg!(windows) { ";" } else { ":" }
+    );
+    let bib_environment = [("BIBINPUTS", bib_paths)];
+    if bcf.is_file() {
+        if !tool_available("biber") {
+            return Err(
+                "This document uses biblatex/Biber, but biber is not installed.\n\nInstall biber and try again."
+                    .to_string(),
+            );
+        }
+        run_tool(
+            "biber",
+            &[stem.to_string()],
+            &output_dir,
+            &bib_environment,
+            &mut log,
+            "biber",
+        )?;
+    } else if aux.is_file() {
+        let aux_text = std::fs::read_to_string(&aux).unwrap_or_default();
+        if aux_text.contains("\\bibdata") || aux_text.contains("\\citation") {
+            if !tool_available("bibtex") {
+                return Err(
+                    "This document uses BibTeX, but bibtex is not installed.\n\nInstall TeX Live with BibTeX and try again."
+                        .to_string(),
+                );
+            }
+            run_tool(
+                "bibtex",
+                &[format!("{stem}.aux")],
+                &output_dir,
+                &bib_environment,
+                &mut log,
+                "bibtex",
+            )?;
         }
     }
+    if idx.is_file() && tool_available("makeindex") {
+        run_tool(
+            "makeindex",
+            &[format!("{stem}.idx")],
+            &output_dir,
+            &[],
+            &mut log,
+            "makeindex",
+        )?;
+    }
+
+    run_tool(&compiler, &engine_args(), parent, &[], &mut log, "pass 2")?;
+    run_tool(&compiler, &engine_args(), parent, &[], &mut log, "pass 3")?;
 
     let pdf = output_dir.join(stem).with_extension("pdf");
     if !pdf.is_file() {
@@ -150,13 +258,21 @@ fn compile_latex(path: String) -> Result<LatexBuild, String> {
     Ok(LatexBuild {
         pdf: pdf.to_string_lossy().into_owned(),
         log: tail(&log, 6000),
-        compiler: compiler.to_string(),
+        compiler,
     })
 }
 
 #[tauri::command]
 fn latex_compiler() -> Option<String> {
-    latex_compiler_name().map(str::to_string)
+    latex_engine_names().first().map(|name| name.to_string())
+}
+
+#[tauri::command]
+fn latex_engines() -> Vec<String> {
+    latex_engine_names()
+        .into_iter()
+        .map(str::to_string)
+        .collect()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -182,7 +298,8 @@ pub fn run() {
             allow_document_dir,
             launch_file,
             latex_compiler,
-            compile_latex
+            compile_latex,
+            latex_engines
         ])
         .run(tauri::generate_context!())
         .expect("error while running HouseMD");

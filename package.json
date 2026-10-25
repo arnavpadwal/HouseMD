@@ -1,6 +1,6 @@
 {
   "name": "housemd",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "description": "A quiet, local-first Markdown editor built with Tauri",
   "type": "module",
@@ -36,6 +36,7 @@
     "markdown-it": "^15.0.3",
     "markdown-it-task-lists": "^2.1.1",
     "mermaid": "^12.2.0",
+    "pdfjs-dist": "^6.4.299",
     "sanitize-html": "^2.18.1"
   },
   "devDependencies": {

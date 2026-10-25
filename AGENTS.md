@@ -15,8 +15,8 @@ access, and system-browser integration.
 
 ## Version
 
-Version 2.5.0 is the current public baseline (CodeMirror editor, line numbers, search/multi-cursor,
-LaTeX editing and compilation, tabs, recovery, settings, and folder sidebar).
+Version 2.6.0 is the current public baseline (CodeMirror editor, line numbers, search/multi-cursor,
+LaTeX editing and in-app PDF preview, tabs, recovery, settings, and folder sidebar).
 
 ## Commands
 
@@ -42,7 +42,8 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
   cross-platform path helpers.
 - `src/editor.ts` owns the CodeMirror 6 editor, language configuration, search, multi-cursor,
   line numbers, and LaTeX language mode. `src/explorer.ts` renders the folder sidebar and
-  `src/settings-panel.ts` owns the appearance/file settings dialog.
+  `src/settings-panel.ts` owns the appearance/file settings dialog, and `src/pdf-preview.ts`
+  renders LaTeX PDFs with PDF.js for the in-app preview.
 - `src/style.css` is a sectioned stylesheet (tokens, shell, workspace, CodeMirror host, Markdown, LaTeX panel, overlays, print). Never reintroduce global `svg { width }` sizing; it breaks Mermaid and KaTeX.
 - `src/markdown.ts` is the pure renderer: it extracts math before Markdown, protects code
   spans/fences from the math pass, converts empty GitHub-style anchors into invisible
@@ -61,9 +62,10 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
   - an in-app close confirmation (not a native dialog, which can deadlock while a
     close request is pending)
 - `src-tauri/src/lib.rs` registers plugins (single-instance first) and the
-  `allow_document_dir`, `launch_file`, `latex_compiler`, and `compile_latex` commands.
-  `allow_document_dir` extends the asset and fs scopes to the opened/saved document folder;
-  `compile_latex` runs pdflatex/xelatex/lualatex with shell escape disabled.
+  `allow_document_dir`, `launch_file`, `latex_compiler`, `latex_engines`, and `compile_latex`
+  commands. `allow_document_dir` extends the asset and fs scopes to the opened/saved document
+  folder and the PDF build cache; `compile_latex` runs pdflatex/xelatex/lualatex with shell
+  escape disabled and performs BibTeX/Biber/MakeIndex passes when needed.
 - `src-tauri/capabilities/default.json` grants core window title/destroy, dialog,
   fs (including read-dir), home-recursive fs scope, opener URL/path, and single-instance support.
 - `src-tauri/tauri.conf.json` defines the window, CSP, asset protocol, and bundling.
@@ -91,6 +93,6 @@ TypeScript is strict and `noEmit`; Prettier enforces style and Rust uses `cargo 
   commit them. Flatpak artifacts are built with `bash flatpak/build-flatpak.sh`.
 - CI lives in `.github/workflows/ci.yml` and runs frontend checks, Rust fmt/clippy, and a
   Tauri build on `main` and `develop`.
-- Version 2.5.0 is the public baseline. Linux distribution is **Flatpak-only**: do not add
+- Version 2.6.0 is the public baseline. Linux distribution is **Flatpak-only**: do not add
   deb/rpm/AppImage bundle targets or release assets. Keep `main` release-ready and integrate
   work on `develop`.

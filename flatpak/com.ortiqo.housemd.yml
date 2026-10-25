@@ -23,6 +23,9 @@ modules:
       - install -Dm755 pdflatex /app/bin/pdflatex
       - install -Dm755 xelatex /app/bin/xelatex
       - install -Dm755 lualatex /app/bin/lualatex
+      - install -Dm755 bibtex /app/bin/bibtex
+      - install -Dm755 biber /app/bin/biber
+      - install -Dm755 makeindex /app/bin/makeindex
       - install -Dm644 com.ortiqo.housemd.desktop /app/share/applications/com.ortiqo.housemd.desktop
       - install -Dm644 com.ortiqo.housemd.metainfo.xml /app/share/metainfo/com.ortiqo.housemd.metainfo.xml
       - install -Dm644 LICENSE /app/share/licenses/com.ortiqo.housemd/LICENSE
@@ -39,6 +42,12 @@ modules:
         path: xelatex
       - type: file
         path: lualatex
+      - type: file
+        path: bibtex
+      - type: file
+        path: biber
+      - type: file
+        path: makeindex
       - type: file
         path: com.ortiqo.housemd.desktop
       - type: file
