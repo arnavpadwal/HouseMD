@@ -84,7 +84,7 @@ Write Markdown on the left and see the rendered result on the right. Open a `.te
 | **Session recovery**       | Tabs, folder, and unsaved recovery drafts are restored after a crash.                                              |
 | **Optional autosave**      | Write edits to disk after a short pause when enabled.                                                              |
 | **Appearance settings**    | Light / dark / system themes, four accent palettes, and adjustable preview/editor type sizes.                      |
-| **Native file workflow**   | Open, save, save-as, drag-and-drop, CLI/desktop file opening, and single-instance reuse.                           |
+| **Native file workflow**   | Starts maximized; open, save, save-as, drag-and-drop, CLI/desktop file opening, and single-instance reuse.         |
 | **Print / PDF**            | Print dialog with a clean print stylesheet for the rendered Markdown preview.                                      |
 
 ## Installation
